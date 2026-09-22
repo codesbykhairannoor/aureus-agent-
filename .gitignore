@@ -1,0 +1,63 @@
+# Secrets · never commit a real environment file
+.env
+.env.*
+!.env.example
+*.secret
+*secrets*
+*.key
+*.pem
+*.keystore
+
+# Local state and databases. The runtime data/ dir (generated DBs, local state)
+# is ignored; the bnbhack/data/ source dir (schema + sample generator) is kept,
+# and any actual database file is still ignored everywhere by the *.db rules.
+/data/
+# Backtest / report artifacts are regenerated from the data; never committed so
+# no number in the repo is one a reviewer cannot reproduce from source.
+output/
+# Single exception: the two allocator artifacts embedded in core/skills/README.md
+# (the equity curve image and the report it links) are tracked so the GitHub render
+# is not a broken image and a dead link. Both still regenerate byte-for-byte from
+# the pinned sample DB; every other output/ artifact stays regenerate-only.
+!core/skills/risk-budgeted-allocator/output/
+core/skills/risk-budgeted-allocator/output/*
+!core/skills/risk-budgeted-allocator/output/equity_curve.svg
+!core/skills/risk-budgeted-allocator/output/equity_report.json
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+state/
+*.log
+scripts/generate_git_history.py
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+
+# Node / frontend build
+node_modules/
+dist/
+build/
+.cache/
+*.tsbuildinfo
+
+# Solidity / Foundry / Hardhat
+out/
+cache/
+artifacts/
+broadcast/
+lib/
+typechain-types/
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
