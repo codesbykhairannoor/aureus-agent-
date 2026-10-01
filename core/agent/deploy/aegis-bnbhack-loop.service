@@ -1,0 +1,58 @@
+# AEGIS BNB HACK autonomous trading loop (Track 1 LIVE driver).
+# Reference template. Install with:
+#   useradd --system --no-create-home --shell /usr/sbin/nologin aegis-agent
+#   chown -R aegis-agent:aegis-agent /opt/aegis-agent
+#   chmod 600 /opt/aegis-agent/secrets/agent-secrets.env
+#   cp deploy/aegis-bnbhack-loop.service /etc/systemd/system/
+#   systemctl daemon-reload && systemctl enable --now aegis-bnbhack-loop
+#
+# The loop runs PAPER / DRY by default: it decides, gates, sizes, plans and
+# publishes its live state, but signs NOTHING. Going live is opt-in via the
+# EnvironmentFile (BNBHACK_EXECUTE_TRADES=1 for spot, BNBHACK_EXECUTE_CHAIN=1 for
+# commit-reveal + equity), and each still requires the relevant key to be set.
+# Secrets come only from the EnvironmentFile; nothing sensitive is in the repo.
+# A single instance keeps the pending-commit SQLite + nonce locks coherent.
+
+[Unit]
+Description=AEGIS BNB HACK Autonomous Loop
+After=network.target
+StartLimitIntervalSec=300s
+StartLimitBurst=10
+
+[Service]
+Type=simple
+# Dedicated unprivileged account, never root: this process holds trade-signing
+# credentials, so a compromise must stay contained to the agent's own data dir.
+User=aegis-agent
+Group=aegis-agent
+WorkingDirectory=/opt/aegis-agent/bnbhack/agent
+Environment=PYTHONDONTWRITEBYTECODE=1
+# Pin the writable state dir OUTSIDE the code tree and exactly match the
+# ReadWritePaths grant below, so the loop's default state location can never
+# drift from the one the sandbox actually permits to be written.
+Environment=BNBHACK_LOOP_STATE_DIR=/opt/aegis-agent/state
+EnvironmentFile=/opt/aegis-agent/.env
+# Signing secrets (twak wallet password / HMAC / access id) live here, loaded
+# only by the loop. The public backend (aegis-bnbhack.service) does NOT load this
+# file, so its process environment never carries the trade-signing credentials.
+EnvironmentFile=/opt/aegis-agent/secrets/agent-secrets.env
+ExecStart=/usr/bin/python3 loop.py
+Restart=always
+RestartSec=10
+OOMScoreAdjust=-400
+# Sandbox: only the pending-commit SQLite + published state dirs are writable;
+# the code tree and the rest of the host filesystem are read-only.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictNamespaces=true
+LockPersonality=true
+ReadWritePaths=/opt/aegis-agent/bnbhack/agent /opt/aegis-agent/state
+
+[Install]
+WantedBy=multi-user.target
