@@ -1,0 +1,47 @@
+# AEGIS BNB HACK agent backend (FastAPI / uvicorn).
+# Reference template. Install with:
+#   useradd --system --no-create-home --shell /usr/sbin/nologin aegis-agent
+#   chown -R aegis-agent:aegis-agent /opt/aegis-agent
+#   cp deploy/aegis-bnbhack.service /etc/systemd/system/
+#   systemctl daemon-reload && systemctl enable --now aegis-bnbhack
+# Secrets and deployer settings come only from the EnvironmentFile below; nothing
+# sensitive is ever committed to the repo. A single worker keeps the in-process
+# rate limiter and x402 nonce store coherent; nginx adds a zone limit in front.
+
+[Unit]
+Description=AEGIS BNB HACK Agent Backend
+After=network.target
+StartLimitIntervalSec=300s
+StartLimitBurst=10
+
+[Service]
+Type=simple
+# Runs as a dedicated unprivileged service account, never root: this process is
+# internet-reachable (behind nginx) and a compromise must not own the host.
+User=aegis-agent
+Group=aegis-agent
+WorkingDirectory=/opt/aegis-agent/bnbhack/api
+EnvironmentFile=/opt/aegis-agent/.env
+# Keep the read-only code tree pristine (no .pyc writes under ProtectSystem).
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStartPre=/bin/bash -c '/usr/bin/fuser -k 8401/tcp 2>/dev/null || true; /bin/sleep 1'
+ExecStart=/usr/bin/python3 -m uvicorn backend:app --host 127.0.0.1 --port 8401 --workers 1
+Restart=always
+RestartSec=5
+OOMScoreAdjust=-500
+# Sandbox: the backend only reads the data dir (loop state, labeled record); the
+# rest of the filesystem is read-only and privilege escalation is blocked.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictNamespaces=true
+LockPersonality=true
+ReadWritePaths=/opt/aegis-agent/bnbhack/data /opt/aegis-agent/state
+
+[Install]
+WantedBy=multi-user.target
