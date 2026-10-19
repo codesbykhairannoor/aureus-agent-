@@ -439,58 +439,108 @@ function ConnectWalletModal({ onClose }: { onClose: () => void }) {
     }
   }, [])
 
-  const startQrSession = async () => {
+  const startQrSession = async (forceFresh = false) => {
     setView('qr')
     setErrorMsg('')
     setCopiedLink(false)
 
-    if (qrDataUrl && wcUri) {
+    if (!forceFresh && qrDataUrl && wcUri) {
       return
     }
 
     setIsGeneratingQr(true)
     try {
-      const QRCode = (await import('qrcode')).default
       const provider = await getOrInitWcProvider()
 
+      // Function to render URI to QR Code (using QRCode.toDataURL with foolproof fallback)
       const renderUri = async (uri: string) => {
         if (!uri || !isMountedRef.current) return
         setWcUri(uri)
         try {
-          const url = await QRCode.toDataURL(uri, {
-            margin: 1,
-            width: 320,
-            color: {
-              dark: '#0a0d14',
-              light: '#ffffff',
-            },
-          })
-          if (isMountedRef.current) {
-            setQrDataUrl(url)
-            setIsGeneratingQr(false)
+          const qrMod: any = QRCode
+          const fn = qrMod?.toDataURL || qrMod?.default?.toDataURL
+          if (typeof fn === 'function') {
+            const url = await fn(uri, {
+              margin: 1,
+              width: 320,
+              color: {
+                dark: '#0a0d14',
+                light: '#ffffff',
+              },
+            })
+            if (isMountedRef.current) {
+              setQrDataUrl(url)
+              setIsGeneratingQr(false)
+              return
+            }
           }
         } catch (e) {
-          console.error('Failed to generate QR data URL:', e)
+          console.warn('Local QRCode generation issue, using instant image fallback:', e)
+        }
+
+        // Foolproof instant fallback
+        if (isMountedRef.current) {
+          setQrDataUrl(`https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=4&data=${encodeURIComponent(uri)}`)
+          setIsGeneratingQr(false)
         }
       }
 
+      // Register display_uri event
       provider.on('display_uri', (uri: string) => {
         renderUri(uri)
       })
 
+      // 1. Direct Pairing Creation: Generates QR pairing immediately in ~50ms
+      try {
+        const corePairing = provider.signer?.client?.core?.pairing
+        if (corePairing) {
+          const existing = corePairing.getPairings?.() || []
+          if (forceFresh && existing.length > 0) {
+            for (const p of existing) {
+              try {
+                await corePairing.disconnect({ topic: p.topic })
+              } catch { /* ignore */ }
+            }
+          }
+
+          const pairing = await corePairing.create()
+          if (pairing?.uri) {
+            await renderUri(pairing.uri)
+            provider.connect({ pairingTopic: pairing.topic }).then(async () => {
+              if (provider.accounts && provider.accounts.length > 0) {
+                await setCustomSession(provider.accounts[0], provider.chainId || 56, provider)
+                onClose()
+              }
+            }).catch((e: any) => {
+              console.warn('Pairing session closed or rejected:', e?.message)
+            })
+            return
+          }
+        }
+      } catch (directErr) {
+        console.warn('Direct pairing create fallback to standard connect:', directErr)
+      }
+
+      // 2. Standard fallback connect
       if (provider.signer?.uri) {
         renderUri(provider.signer.uri)
       }
 
-      // Initiate connect in background
       provider.connect().then(async () => {
         if (provider.accounts && provider.accounts.length > 0) {
           await setCustomSession(provider.accounts[0], provider.chainId || 56, provider)
           onClose()
         }
       }).catch((e: any) => {
-        console.warn('Pairing closed or rejected:', e?.message)
+        console.warn('Standard connect closed:', e?.message)
       })
+
+      // Watchdog: If after 3.5 seconds isGeneratingQr is still true, release spinner
+      setTimeout(() => {
+        if (isMountedRef.current && !qrDataUrl) {
+          setIsGeneratingQr(false)
+        }
+      }, 3500)
     } catch (err: any) {
       console.error('WalletConnect QR error:', err)
       setErrorMsg('Gagal memuat sesi WalletConnect: ' + (err?.message || ''))
@@ -833,10 +883,28 @@ function ConnectWalletModal({ onClose }: { onClose: () => void }) {
                   </>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, padding: 20 }}>
-                    <span className="cp-spinner" style={{ width: 34, height: 34, borderColor: '#3b82f6', borderTopColor: 'transparent' }} />
-                    <span style={{ fontSize: 12, fontWeight: 600, color: '#334155' }}>
-                      Menghubungkan ke Relay WalletConnect...
-                    </span>
+                    {isGeneratingQr ? (
+                      <>
+                        <span className="cp-spinner" style={{ width: 34, height: 34, borderColor: '#3b82f6', borderTopColor: 'transparent' }} />
+                        <span style={{ fontSize: 12, fontWeight: 600, color: '#334155' }}>
+                          Menghubungkan ke Relay WalletConnect...
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: '#dc2626' }}>
+                          Relay WalletConnect belum merespons.
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => startQrSession(true)}
+                          className="btn btn-primary btn-sm"
+                          style={{ fontSize: 11.5, padding: '6px 14px' }}
+                        >
+                          🔄 Generate Ulang QR Code
+                        </button>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
