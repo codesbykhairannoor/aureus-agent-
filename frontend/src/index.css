@@ -239,18 +239,249 @@ html.compete-active ::-webkit-scrollbar { width: 10px; height: 10px; display: bl
 .compete-root[data-font="inter"]   { --cp-font: "Inter", sans-serif; --cp-font-heading: "Inter", sans-serif; }
 .compete-root[data-font="mono"]    { --cp-font: "JetBrains Mono", monospace; --cp-font-heading: "JetBrains Mono", monospace; }
 
+/* ═══════════════ GLOBAL WEB3 AMBIENT BACKDROP ═══════════════ */
 .compete-root {
-  background: var(--c-bg);
+  background-color: var(--c-bg);
+  background-image:
+    /* Top Center BNB Gold Solar Beam */
+    radial-gradient(circle at 50% -20px, rgba(240, 185, 11, 0.16) 0%, rgba(240, 185, 11, 0.04) 35%, transparent 65%),
+    /* Left Telemetry Ambient Indigo/Violet Glow */
+    radial-gradient(circle at 5% 30%, rgba(99, 102, 241, 0.08) 0%, transparent 45%),
+    /* Right Cyber Blue Liquidity Glow */
+    radial-gradient(circle at 95% 60%, rgba(59, 153, 252, 0.07) 0%, transparent 40%),
+    /* High-Tech Perspective Web3 Grid Lines */
+    linear-gradient(rgba(240, 185, 11, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(240, 185, 11, 0.035) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 100% 100%, 44px 44px, 44px 44px;
+  background-position: 0 0, 0 0, 0 0, -1px -1px, -1px -1px;
+  background-attachment: fixed;
   color: var(--c-text);
   font-family: var(--cp-font);
-  /* The terminal global stylesheet forces font-family on every element via a
-     universal !important rule that resolves var(--font-body). Point that token
-     at the compete font so the sub-site font picker actually takes effect. */
-  --font-body: var(--cp-font);
   min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   transition: background-color .45s ease, color .45s ease;
+}
+
+.compete-root[data-theme="daylight"] {
+  background-image:
+    radial-gradient(circle at 50% -20px, rgba(201, 148, 0, 0.12) 0%, transparent 55%),
+    radial-gradient(circle at 95% 40%, rgba(59, 153, 252, 0.05) 0%, transparent 40%),
+    linear-gradient(rgba(0, 0, 0, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.03) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 44px 44px, 44px 44px;
+}
+
+/* ─────────────── Web3 Ambient Layer ─────────────── */
+.cp-web3-ambient-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.cp-ambient-orbs {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.cp-amb-orb {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(120px);
+}
+
+.cp-amb-solar {
+  width: 550px;
+  height: 550px;
+  top: -120px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: radial-gradient(circle, rgba(240, 185, 11, 0.16) 0%, rgba(240, 185, 11, 0.02) 65%, transparent 80%);
+  animation: cp-pulse-solar 12s ease-in-out infinite alternate;
+}
+
+.cp-amb-violet {
+  width: 420px;
+  height: 420px;
+  top: 25%;
+  left: -100px;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.11) 0%, transparent 70%);
+  animation: cp-float-ambient 22s ease-in-out infinite alternate;
+}
+
+.cp-amb-cyan {
+  width: 460px;
+  height: 460px;
+  top: 55%;
+  right: -120px;
+  background: radial-gradient(circle, rgba(59, 153, 252, 0.10) 0%, transparent 70%);
+  animation: cp-float-ambient 20s ease-in-out infinite alternate-reverse;
+}
+
+.cp-amb-emerald {
+  width: 380px;
+  height: 380px;
+  bottom: -80px;
+  left: 30%;
+  background: radial-gradient(circle, rgba(2, 192, 118, 0.07) 0%, transparent 70%);
+  animation: cp-float-ambient 18s ease-in-out infinite alternate;
+}
+
+@keyframes cp-pulse-solar {
+  0%   { opacity: 0.7; transform: translateX(-50%) scale(0.95); }
+  100% { opacity: 1.0; transform: translateX(-50%) scale(1.08); }
+}
+
+@keyframes cp-float-ambient {
+  0%   { transform: translate3d(0, 0, 0); }
+  50%  { transform: translate3d(40px, -35px, 0); }
+  100% { transform: translate3d(-30px, 45px, 0); }
+}
+
+/* Floating Web3 Geometric Elements */
+.cp-float-geo {
+  position: absolute;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.cp-float-left {
+  top: 140px;
+  left: 20px;
+  animation: cp-geo-sway 24s ease-in-out infinite alternate;
+}
+
+.cp-float-right {
+  top: 260px;
+  right: 25px;
+  animation: cp-geo-sway 28s ease-in-out infinite alternate-reverse;
+}
+
+@keyframes cp-geo-sway {
+  0%   { transform: translate3d(0, 0, 0) rotate(0deg); }
+  50%  { transform: translate3d(15px, -20px, 0) rotate(4deg); }
+  100% { transform: translate3d(-10px, 25px, 0) rotate(-3deg); }
+}
+
+@media (max-width: 1200px) {
+  .cp-float-geo { display: none; }
+}
+
+/* Subtle Vertical Cyber Circuit Lines */
+.cp-circuit-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: linear-gradient(180deg, transparent 0%, rgba(240, 185, 11, 0.15) 20%, rgba(59, 153, 252, 0.12) 60%, transparent 100%);
+  pointer-events: none;
+  opacity: 0.45;
+}
+.cp-circuit-left  { left: 32px; }
+.cp-circuit-right { right: 32px; }
+
+@media (max-width: 900px) {
+  .cp-circuit-line { display: none; }
+}
+
+/* ─────────────── StarField rain animation ─────────────── */
+.cp-stars {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+.cp-stars i {
+  position: absolute;
+  top: -12px;
+  border-radius: 50%;
+  opacity: 0;
+  box-shadow: 0 0 8px var(--c-primary, #F0B90B), 0 0 14px rgba(240, 185, 11, 0.4);
+  animation: cp-star-fall linear infinite;
+}
+@keyframes cp-star-fall {
+  0% {
+    transform: translateY(0) translateX(0);
+    opacity: 0;
+  }
+  15% {
+    opacity: var(--so, 0.65);
+  }
+  85% {
+    opacity: var(--so, 0.65);
+  }
+  100% {
+    transform: translateY(105vh) translateX(var(--sx, 20px));
+    opacity: 0;
+  }
+}
+
+/* ─────────────── cp-mesh & hero ambient ─────────────── */
+.cp-mesh {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+.cp-wash {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(85% 65% at 50% 15%, rgba(240, 185, 11, 0.14) 0%, rgba(11, 14, 17, 0) 80%);
+  pointer-events: none;
+}
+.cp-grid-bg {
+  position: absolute;
+  inset: 0;
+  background-image: 
+    linear-gradient(rgba(240, 185, 11, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(240, 185, 11, 0.05) 1px, transparent 1px);
+  background-size: 40px 40px;
+  mask-image: radial-gradient(ellipse at 50% 30%, rgba(0, 0, 0, 1) 20%, rgba(0, 0, 0, 0) 80%);
+  -webkit-mask-image: radial-gradient(ellipse at 50% 30%, rgba(0, 0, 0, 1) 20%, rgba(0, 0, 0, 0) 80%);
+  pointer-events: none;
+}
+.cp-orbs {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.cp-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(100px);
+  pointer-events: none;
+  animation: cp-orb-float 18s ease-in-out infinite alternate;
+}
+@keyframes cp-orb-float {
+  0%   { transform: translate3d(0, 0, 0) scale(1); }
+  50%  { transform: translate3d(35px, -30px, 0) scale(1.12); }
+  100% { transform: translate3d(-25px, 40px, 0) scale(0.92); }
+}
+
+/* ─────────────── Luxurious Card Hover Effects ─────────────── */
+.compete-root .card,
+.compete-root .cp-card,
+.compete-root .panel {
+  transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.24s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.24s ease !important;
+  position: relative;
+}
+.compete-root .card:hover,
+.compete-root .cp-card:hover,
+.compete-root .panel:hover {
+  border-color: rgba(240, 185, 11, 0.42) !important;
+  box-shadow: 0 16px 45px rgba(0, 0, 0, 0.8), 0 0 24px rgba(240, 185, 11, 0.12) !important;
+  transform: translateY(-2px);
 }
 /* Animate the palette swap so a theme change is unmistakably visible. */
 .compete-root .card, .compete-root .stat, .compete-root .cp-nav,

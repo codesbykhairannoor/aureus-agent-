@@ -21,6 +21,7 @@ import {
   IconRadar, IconBot, IconBolt, IconShield, IconGavel, IconScale, IconDocs, IconWallet,
 } from './icons'
 import { Web3WalletProvider, WalletNavButton, useWeb3Wallet } from './web3Wallet'
+import Web3AmbientLayer from './Web3AmbientLayer'
 
 // Lazy-loaded routes for optimal bundle splitting (modular per page)
 const Landing = lazy(() => import('./pages/Landing'))
@@ -245,6 +246,9 @@ function AppShellInner() {
 
   return (
     <div className="compete-root" data-theme={theme} data-font={font} data-lang={lang}>
+      {/* Flagship Web3 Ambient Layer: Cosmic Starfield, Glowing Orbs, Floating Wireframes & Circuit Traces */}
+      <Web3AmbientLayer />
+
       {/* ═════════════════════════════════════════════════════════════
           STATE 1: BEFORE LOGIN (!isLoggedIn)
           Only public marketing pages with dedicated Top Navbar.
