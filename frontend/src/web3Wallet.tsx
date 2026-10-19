@@ -381,6 +381,7 @@ function ConnectWalletModal({ onClose }: { onClose: () => void }) {
     setErrorMsg('')
     try {
       const { EthereumProvider } = await import('@walletconnect/ethereum-provider')
+      const { ConnectionController } = await import('@reown/appkit-controllers')
       const projId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || 'c0891d12d1bca7289e089af886e1945b'
 
       let provider = wcProviderRef.current
@@ -402,6 +403,13 @@ function ConnectWalletModal({ onClose }: { onClose: () => void }) {
           },
         })
         wcProviderRef.current = provider
+
+        // Critical bridge: pass provider's display_uri directly to Reown AppKit's ConnectionController
+        provider.on('display_uri', (uri: string) => {
+          if (uri) {
+            ConnectionController.setUri(uri)
+          }
+        })
       }
 
       onClose() // Close custom modal so official Reown Web3Modal opens cleanly
@@ -637,7 +645,31 @@ function ConnectWalletModal({ onClose }: { onClose: () => void }) {
               </button>
             </div>
 
-            <div style={{ marginTop: 18, paddingTop: 14, borderTop: '1px solid var(--c-line)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11.5, color: 'var(--c-muted)' }}>
+            {/* Direct Mobile Launchers */}
+            <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+              <a
+                href={`https://link.trustwallet.com/open_url?url=${encodeURIComponent(typeof window !== 'undefined' ? window.location.href : 'https://aureus-agent.vercel.app')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-ghost btn-sm"
+                style={{ justifyContent: 'center', fontSize: 11.5, gap: 5, textDecoration: 'none', color: 'inherit' }}
+              >
+                <LogoTrust size={15} />
+                <span>Buka di Trust (HP)</span>
+              </a>
+              <a
+                href={`https://metamask.app.link/dapp/${typeof window !== 'undefined' ? window.location.host + window.location.pathname : 'aureus-agent.vercel.app'}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-ghost btn-sm"
+                style={{ justifyContent: 'center', fontSize: 11.5, gap: 5, textDecoration: 'none', color: 'inherit' }}
+              >
+                <IconWallet size={15} />
+                <span>Buka di MetaMask (HP)</span>
+              </a>
+            </div>
+
+            <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--c-line)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11.5, color: 'var(--c-muted)' }}>
               <span>Need a wallet?</span>
               <a
                 href="https://trustwallet.com/download"
