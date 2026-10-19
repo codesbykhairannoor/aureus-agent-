@@ -14,7 +14,7 @@
 
 import { Suspense, lazy, useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import './index.css'
-import { GITHUB_URL } from './config'
+import { GITHUB_URL, CONTACT_EMAIL } from './config'
 import { shortAddr } from './ui'
 import {
   BrandLogo, IconMenu, IconClose, IconPalette, IconCheck, IconCaret,
@@ -441,6 +441,8 @@ function AppShellInner() {
                     <div className="cp-foot-col-h">Resources</div>
                     <span className="cp-foot-link" onClick={() => go('/docs')}>Documentation</span>
                     <a className="cp-foot-link" href={GITHUB_URL} target="_blank" rel="noopener noreferrer">GitHub</a>
+                    <a className="cp-foot-link" href={`mailto:${CONTACT_EMAIL}`}>Contact: {CONTACT_EMAIL}</a>
+                    <a className="cp-foot-link" href="https://www.bnbchain.org/en/grants" target="_blank" rel="noopener noreferrer">BNB Grants Portal</a>
                     <span className="cp-foot-link" onClick={() => go('/security')}>Security Scorecard</span>
                   </div>
                 </div>

@@ -4,7 +4,13 @@
    Edit GITHUB_URL / DOCS links in one place. */
 
 // Open-source repository. Update to the exact public repo before submission.
-export const GITHUB_URL = 'https://github.com/khairking6/aegis-agent'
+export const GITHUB_URL = 'https://github.com/codesbykhairannoor/aureus-agent-'
+export const CONTACT_EMAIL = 'dev@khiaran.tech'
+export const GRANT_LINKS = {
+  bnbGrants: 'https://www.bnbchain.org/en/grants',
+  bnbPrograms: 'https://www.bnbchain.org/en/programs',
+  doraHacks: 'https://dorahacks.io/org/bnbchain',
+}
 export const TERMINAL_URL = '/terminal'
 // The live ERC-8004 registration-v1 document the agent's identity points its
 // agentURI at. Serving it from the same origin keeps the minted identity and the

@@ -357,7 +357,16 @@ all live in their own repos:
 - [`bnbchain-mcp`](https://github.com/khairking6/bnbchain-mcp) · BNB Chain MCP tooling
 - [`aegis-python-sdk`](https://github.com/khairking6/aegis-python-sdk) · [`aegis-cli`](https://github.com/khairking6/aegis-cli) · client SDK and CLI
 
-The full set is published under [github.com/khairking6](https://github.com/khairking6).
+The full set is published under [github.com/codesbykhairannoor/aureus-agent-](https://github.com/codesbykhairannoor/aureus-agent-).
+
+---
+
+## Developer Contact & Ecosystem Grants
+
+- **Developer / Lead Architect**: `dev@khiaran.tech`
+- **Official Repository**: [github.com/codesbykhairannoor/aureus-agent-](https://github.com/codesbykhairannoor/aureus-agent-)
+- **BNB Chain Grants Portal**: [bnbchain.org/en/grants](https://www.bnbchain.org/en/grants)
+- **BNB Chain Ecosystem Programs**: [bnbchain.org/en/programs](https://www.bnbchain.org/en/programs)
 
 ---
 
