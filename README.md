@@ -363,7 +363,7 @@ The full set is published under [github.com/codesbykhairannoor/aureus-agent-](ht
 
 ## Developer Contact & Ecosystem Grants
 
-- **Developer / Lead Architect**: `dev@khiaran.tech`
+- **Developer / Lead Architect**: `dev@khairan.tech`
 - **Official Repository**: [github.com/codesbykhairannoor/aureus-agent-](https://github.com/codesbykhairannoor/aureus-agent-)
 - **BNB Chain Grants Portal**: [bnbchain.org/en/grants](https://www.bnbchain.org/en/grants)
 - **BNB Chain Ecosystem Programs**: [bnbchain.org/en/programs](https://www.bnbchain.org/en/programs)

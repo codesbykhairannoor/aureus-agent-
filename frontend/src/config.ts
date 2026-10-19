@@ -5,7 +5,7 @@
 
 // Open-source repository. Update to the exact public repo before submission.
 export const GITHUB_URL = 'https://github.com/codesbykhairannoor/aureus-agent-'
-export const CONTACT_EMAIL = 'dev@khiaran.tech'
+export const CONTACT_EMAIL = 'dev@khairan.tech'
 export const GRANT_LINKS = {
   bnbGrants: 'https://www.bnbchain.org/en/grants',
   bnbPrograms: 'https://www.bnbchain.org/en/programs',
