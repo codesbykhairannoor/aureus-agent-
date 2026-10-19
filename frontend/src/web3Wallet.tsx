@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import QRCode from 'qrcode'
 import { IconClose, IconCheck, IconExternal, IconWallet, LogoTrust, LogoBnb } from './icons'
 import { shortAddr } from './ui'
@@ -335,21 +336,55 @@ function ConnectWalletModal({ onClose }: { onClose: () => void }) {
     setTimeout(() => setCopied(false), 2000)
   }
 
-  return (
-    <div className="cp-modal-overlay" onClick={onClose} style={{ zIndex: 99999 }}>
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  if (typeof document === 'undefined') return null
+
+  return createPortal(
+    <div className="compete-root" data-theme="obsidian" style={{ position: 'fixed', inset: 0, zIndex: 999999 }}>
       <div
-        className="cp-modal card"
-        onClick={(e) => e.stopPropagation()}
+        className="cp-modal-overlay"
+        onClick={onClose}
         style={{
-          maxWidth: 440,
-          width: '92%',
-          background: 'var(--c-panel)',
-          border: '1px solid var(--c-line-2)',
-          boxShadow: '0 24px 60px var(--c-shadow-2)',
-          borderRadius: 16,
-          padding: 24,
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          width: '100vw',
+          height: '100vh',
+          zIndex: 999999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: 16,
+          background: 'rgba(5, 7, 13, 0.85)',
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
         }}
       >
+        <div
+          className="cp-modal card"
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            maxWidth: 440,
+            width: '92%',
+            background: 'var(--c-panel, #181a20)',
+            border: '1px solid var(--c-line-2, rgba(240, 185, 11, 0.3))',
+            boxShadow: '0 24px 60px rgba(0,0,0,0.85)',
+            borderRadius: 18,
+            padding: 24,
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            color: 'var(--c-text, #eaecef)',
+          }}
+        >
         {view === 'qr' ? (
           <div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
@@ -574,8 +609,10 @@ function ConnectWalletModal({ onClose }: { onClose: () => void }) {
             </div>
           </div>
         )}
+        </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 
