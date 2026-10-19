@@ -365,12 +365,53 @@ function IconQrCode({ size = 18 }: { size?: number }) {
   )
 }
 
+let globalWcProvider: any = null
+let globalWcProviderPromise: Promise<any> | null = null
+
+async function getOrInitWcProvider() {
+  if (globalWcProvider) return globalWcProvider
+  if (!globalWcProviderPromise) {
+    globalWcProviderPromise = (async () => {
+      const { EthereumProvider } = await import('@walletconnect/ethereum-provider')
+      const { ConnectionController } = await import('@reown/appkit-controllers')
+      const projId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || 'c0891d12d1bca7289e089af886e1945b'
+
+      const provider = await EthereumProvider.init({
+        projectId: projId,
+        chains: [56],
+        optionalChains: [56, 1, 97],
+        showQrModal: true,
+        rpcMap: {
+          56: 'https://bsc-dataseed.binance.org/',
+          1: 'https://eth.llamarpc.com',
+        },
+        metadata: {
+          name: 'Aureus Sentinel AI',
+          description: 'AI-Powered BSC Sentinel & Trading Terminal',
+          url: typeof window !== 'undefined' ? window.location.origin : 'https://aureus-agent.vercel.app',
+          icons: ['https://bin.bnbstatic.com/static/images/common/favicon.ico'],
+        },
+      })
+
+      // Pipe display_uri directly to Reown AppKit's ConnectionController
+      provider.on('display_uri', (uri: string) => {
+        if (uri) {
+          ConnectionController.setUri(uri)
+        }
+      })
+
+      globalWcProvider = provider
+      return provider
+    })()
+  }
+  return globalWcProviderPromise
+}
+
 /* ═══════════════ CONNECT WALLET MODAL ═══════════════ */
 function ConnectWalletModal({ onClose }: { onClose: () => void }) {
   const { connect, isConnecting, setCustomSession } = useWeb3Wallet()
   const [errorMsg, setErrorMsg] = useState('')
   const [isLaunchingAppKit, setIsLaunchingAppKit] = useState(false)
-  const wcProviderRef = useRef<any>(null)
   const anyWin = typeof window !== 'undefined' ? (window as any) : {}
 
   const hasInjected = typeof window !== 'undefined' && !!anyWin.ethereum
@@ -380,36 +421,12 @@ function ConnectWalletModal({ onClose }: { onClose: () => void }) {
     setIsLaunchingAppKit(true)
     setErrorMsg('')
     try {
-      const { EthereumProvider } = await import('@walletconnect/ethereum-provider')
       const { ConnectionController } = await import('@reown/appkit-controllers')
-      const projId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || 'c0891d12d1bca7289e089af886e1945b'
+      const provider = await getOrInitWcProvider()
 
-      let provider = wcProviderRef.current
-      if (!provider) {
-        provider = await EthereumProvider.init({
-          projectId: projId,
-          chains: [56],
-          optionalChains: [56, 1, 97],
-          showQrModal: true,
-          rpcMap: {
-            56: 'https://bsc-dataseed.binance.org/',
-            1: 'https://eth.llamarpc.com',
-          },
-          metadata: {
-            name: 'Aureus Sentinel AI',
-            description: 'AI-Powered BSC Sentinel & Trading Terminal',
-            url: typeof window !== 'undefined' ? window.location.origin : 'https://aureus-agent.vercel.app',
-            icons: ['https://bin.bnbstatic.com/static/images/common/favicon.ico'],
-          },
-        })
-        wcProviderRef.current = provider
-
-        // Critical bridge: pass provider's display_uri directly to Reown AppKit's ConnectionController
-        provider.on('display_uri', (uri: string) => {
-          if (uri) {
-            ConnectionController.setUri(uri)
-          }
-        })
+      // If existing pairing URI is ready on the signer, push to ConnectionController immediately
+      if (provider.signer?.uri) {
+        ConnectionController.setUri(provider.signer.uri)
       }
 
       onClose() // Close custom modal so official Reown Web3Modal opens cleanly
