@@ -368,144 +368,59 @@ function IconQrCode({ size = 18 }: { size?: number }) {
 /* ═══════════════ CONNECT WALLET MODAL ═══════════════ */
 function ConnectWalletModal({ onClose }: { onClose: () => void }) {
   const { connect, isConnecting, setCustomSession } = useWeb3Wallet()
-  const [view, setView] = useState<'list' | 'qr'>('list')
-  const [qrCodeUrl, setQrCodeUrl] = useState<string>('')
-  const [qrUri, setQrUri] = useState<string>('')
-  const [copied, setCopied] = useState<boolean>(false)
   const [errorMsg, setErrorMsg] = useState('')
-  const [wcState, setWcState] = useState<'idle' | 'initializing' | 'waiting' | 'connected' | 'error'>('idle')
-  const [wcStatusText, setWcStatusText] = useState('')
+  const [isLaunchingAppKit, setIsLaunchingAppKit] = useState(false)
   const wcProviderRef = useRef<any>(null)
-  const isConnectingWc = useRef<boolean>(false)
   const anyWin = typeof window !== 'undefined' ? (window as any) : {}
 
   const hasInjected = typeof window !== 'undefined' && !!anyWin.ethereum
   const hasTrust = typeof window !== 'undefined' && (!!anyWin.trustwallet || !!anyWin.ethereum?.isTrust)
 
-  const generateInstantQr = async () => {
-    const projId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || 'c0891d12d1bca7289e089af886e1945b'
-    try {
-      let randTopic = ''
-      let randKey = ''
-      if (typeof window !== 'undefined' && window.crypto?.getRandomValues) {
-        const tArr = new Uint8Array(16)
-        const kArr = new Uint8Array(32)
-        window.crypto.getRandomValues(tArr)
-        window.crypto.getRandomValues(kArr)
-        randTopic = Array.from(tArr, b => b.toString(16).padStart(2, '0')).join('')
-        randKey = Array.from(kArr, b => b.toString(16).padStart(2, '0')).join('')
-      } else {
-        randTopic = Math.random().toString(36).substring(2, 12) + Date.now().toString(36)
-        randKey = '71c8a6992e991c2acc5b09e962cd619554e73a9f' + Math.random().toString(36).substring(2, 8)
-      }
-
-      const fastUri = `wc:${randTopic}@2?relay-protocol=irn&symKey=${randKey}&projectId=${projId}`
-      setQrUri(fastUri)
-      const dataUrl = await QRCode.toDataURL(fastUri, {
-        width: 230,
-        margin: 1,
-        color: { dark: '#080A0F', light: '#FFFFFF' },
-      })
-      setQrCodeUrl(dataUrl)
-      setWcState('waiting')
-      setWcStatusText('QR Code active! Scan with Trust Wallet or MetaMask.')
-      return fastUri
-    } catch {
-      return ''
-    }
-  }
-
-  const initWalletConnect = async () => {
-    setView('qr')
+  const openOfficialWalletConnect = async () => {
+    setIsLaunchingAppKit(true)
     setErrorMsg('')
-    setWcState('waiting')
-
-    // Step 1: Render high-speed QR code immediately (<30ms) so user is NEVER stuck on a loading spinner
-    await generateInstantQr()
-
-    // Step 2: In parallel, attempt live WebSocket relay connection with a 4s safety timeout
     try {
       const { EthereumProvider } = await import('@walletconnect/ethereum-provider')
       const projId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || 'c0891d12d1bca7289e089af886e1945b'
 
-      const initPromise = EthereumProvider.init({
-        projectId: projId,
-        chains: [56],
-        optionalChains: [56, 1, 97],
-        showQrModal: false,
-        rpcMap: {
-          56: 'https://bsc-dataseed.binance.org/',
-          1: 'https://eth.llamarpc.com',
-        },
-        metadata: {
-          name: 'Aureus Sentinel AI',
-          description: 'AI-Powered BSC Sentinel & Trading Terminal',
-          url: typeof window !== 'undefined' ? window.location.origin : 'https://aureus-agent.vercel.app',
-          icons: ['https://bin.bnbstatic.com/static/images/common/favicon.ico'],
-        },
-      })
-
-      const timeoutPromise = new Promise<null>(resolve => setTimeout(() => resolve(null), 3500))
-      const provider = await Promise.race([initPromise, timeoutPromise])
-
-      if (provider) {
+      let provider = wcProviderRef.current
+      if (!provider) {
+        provider = await EthereumProvider.init({
+          projectId: projId,
+          chains: [56],
+          optionalChains: [56, 1, 97],
+          showQrModal: true,
+          rpcMap: {
+            56: 'https://bsc-dataseed.binance.org/',
+            1: 'https://eth.llamarpc.com',
+          },
+          metadata: {
+            name: 'Aureus Sentinel AI',
+            description: 'AI-Powered BSC Sentinel & Trading Terminal',
+            url: typeof window !== 'undefined' ? window.location.origin : 'https://aureus-agent.vercel.app',
+            icons: ['https://bin.bnbstatic.com/static/images/common/favicon.ico'],
+          },
+        })
         wcProviderRef.current = provider
+      }
 
-        provider.on('display_uri', async (liveUri: string) => {
-          if (!liveUri) return
-          setQrUri(liveUri)
-          try {
-            const liveUrl = await QRCode.toDataURL(liveUri, {
-              width: 230,
-              margin: 1,
-              color: { dark: '#080A0F', light: '#FFFFFF' },
-            })
-            setQrCodeUrl(liveUrl)
-            setWcState('waiting')
-            setWcStatusText('🟢 Live relay connected! Waiting for mobile approval...')
-          } catch {
-            /* ignore */
-          }
-        })
+      onClose() // Close custom modal so official Reown Web3Modal opens cleanly
 
-        // Check if existing session
-        if (provider.connected && provider.accounts && provider.accounts.length > 0) {
-          setWcState('connected')
-          setWcStatusText('Active session detected! Connecting...')
-          await setCustomSession(provider.accounts[0], provider.chainId || 56, provider)
-          setTimeout(() => onClose(), 400)
-          return
-        }
+      await provider.connect()
 
-        // Start awaiting approval asynchronously
-        provider.connect().then(async () => {
-          if (provider.accounts && provider.accounts.length > 0) {
-            setWcState('connected')
-            setWcStatusText('Approval confirmed! Syncing wallet balance...')
-            await setCustomSession(provider.accounts[0], provider.chainId || 56, provider)
-            setTimeout(() => onClose(), 600)
-          }
-        }).catch((err: any) => {
-          console.warn('WalletConnect session ended:', err?.message)
-          if (err?.message?.includes('User rejected')) {
-            setWcState('error')
-            setWcStatusText('Connection rejected in mobile wallet.')
-          }
-        })
-      } else {
-        // Relay took > 3.5s (ISP or network latency)
-        setWcStatusText('Direct pairing active. Scan with camera or tap Open in Trust.')
+      if (provider.accounts && provider.accounts.length > 0) {
+        await setCustomSession(provider.accounts[0], provider.chainId || 56, provider)
       }
     } catch (e: any) {
-      console.warn('WalletConnect relay fallback:', e?.message)
-      setWcStatusText('Direct pairing active. Scan with camera or tap Open in Trust.')
+      console.warn('WalletConnect modal flow:', e?.message)
+      setIsLaunchingAppKit(false)
     }
   }
 
   const handleSelect = async (type: string) => {
     setErrorMsg('')
     if (type === 'walletconnect') {
-      await initWalletConnect()
+      await openOfficialWalletConnect()
       return
     }
 
@@ -515,22 +430,30 @@ function ConnectWalletModal({ onClose }: { onClose: () => void }) {
       return
     }
 
+    if (type === 'trust') {
+      if (hasTrust) {
+        const ok = await connect('trust')
+        if (ok) return
+      }
+      // If extension not present, launch official WalletConnect / AppKit modal for Trust Wallet!
+      await openOfficialWalletConnect()
+      return
+    }
+
+    if (type === 'metamask') {
+      if (hasInjected) {
+        const ok = await connect('metamask')
+        if (ok) return
+      }
+      // If extension not present, launch official WalletConnect / AppKit modal for MetaMask!
+      await openOfficialWalletConnect()
+      return
+    }
+
     const ok = await connect(type)
     if (!ok) {
-      if (!hasInjected && !hasTrust) {
-        // If user tapped Trust or MetaMask without browser extension, auto-switch to QR scanner
-        await initWalletConnect()
-      } else {
-        setErrorMsg('Connection request was declined or timed out.')
-      }
+      await openOfficialWalletConnect()
     }
-  }
-
-  const copyQrUri = () => {
-    if (!qrUri) return
-    navigator.clipboard.writeText(qrUri)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
   }
 
   useEffect(() => {
@@ -582,140 +505,6 @@ function ConnectWalletModal({ onClose }: { onClose: () => void }) {
             color: 'var(--c-text, #eaecef)',
           }}
         >
-        {view === 'qr' ? (
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-              <button
-                onClick={() => setView('list')}
-                className="cp-pop-row"
-                style={{ background: 'none', border: 'none', padding: '4px 8px', fontSize: 13, fontWeight: 700, color: 'var(--c-primary)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}
-              >
-                ← Back to Wallets
-              </button>
-              <button className="cp-iconbtn" onClick={onClose} aria-label="Close modal">
-                <IconClose size={18} />
-              </button>
-            </div>
-
-            <div style={{ textAlign: 'center', marginBottom: 16 }}>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '4px 10px', borderRadius: 999, background: 'rgba(59,153,252,0.12)', border: '1px solid rgba(59,153,252,0.3)', marginBottom: 8 }}>
-                <LogoWalletConnect size={16} />
-                <span style={{ fontSize: 11.5, fontWeight: 800, color: '#3B99FC' }}>WalletConnect v2 Relay · BNB Chain (56)</span>
-              </div>
-              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 900, color: 'var(--c-text)' }}>Scan QR with Mobile Wallet</h3>
-              <p style={{ margin: '6px 0 0', fontSize: 12.5, color: 'var(--c-text-2)', lineHeight: 1.5 }}>
-                Open Trust Wallet, Binance, or MetaMask on your phone and scan this code with your camera.
-              </p>
-            </div>
-
-            {/* QR Code Graphic Frame */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 16 }}>
-              <div style={{ padding: 12, background: '#ffffff', borderRadius: 16, border: '2px solid var(--c-primary)', boxShadow: '0 12px 36px rgba(240,185,11,0.22)', position: 'relative' }}>
-                {qrCodeUrl ? (
-                  <img src={qrCodeUrl} alt="WalletConnect QR Code" style={{ width: 220, height: 220, display: 'block', borderRadius: 6 }} />
-                ) : (
-                  <div style={{ width: 220, height: 220, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#181a20', gap: 12, textAlign: 'center', padding: 16 }}>
-                    <span className="cp-spinner" style={{ width: 34, height: 34 }} />
-                    <span style={{ fontSize: 12, fontWeight: 700, color: '#474D57' }}>
-                      {wcStatusText || 'Connecting to relay.walletconnect.org…'}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {/* Status pill under QR */}
-              <div style={{
-                marginTop: 12,
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 7,
-                padding: '5px 14px',
-                borderRadius: 999,
-                background: wcState === 'connected' ? 'rgba(14,203,129,0.15)' : wcState === 'waiting' ? 'rgba(59,153,252,0.15)' : 'rgba(240,185,11,0.15)',
-                border: `1px solid ${wcState === 'connected' ? 'var(--green)' : wcState === 'waiting' ? '#3B99FC' : 'var(--c-primary)'}`,
-                fontSize: 12,
-                fontWeight: 700,
-                color: wcState === 'connected' ? 'var(--green)' : wcState === 'waiting' ? '#60a5fa' : 'var(--c-primary)'
-              }}>
-                <span style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: '50%',
-                  background: wcState === 'connected' ? 'var(--green)' : wcState === 'waiting' ? '#3B99FC' : 'var(--c-primary)',
-                  display: 'inline-block',
-                  boxShadow: '0 0 8px currentColor'
-                }} />
-                <span>
-                  {wcStatusText || (qrCodeUrl ? 'Awaiting confirmation in mobile wallet…' : 'Establishing live handshake…')}
-                </span>
-              </div>
-            </div>
-
-            {errorMsg && (
-              <div style={{ padding: '8px 12px', background: 'rgba(248,73,96,0.12)', border: '1px solid var(--red)', borderRadius: 8, fontSize: 12, color: 'var(--red)', marginBottom: 12, textAlign: 'center' }}>
-                {errorMsg}
-              </div>
-            )}
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {/* Copy QR pairing link + Regenerate button */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-                <button
-                  className="btn btn-ghost btn-sm"
-                  onClick={copyQrUri}
-                  disabled={!qrUri}
-                  style={{ justifyContent: 'center', gap: 6, fontSize: 12 }}
-                >
-                  {copied ? <IconCheck size={14} style={{ color: 'var(--green)' }} /> : <IconQrCode size={14} />}
-                  <span>{copied ? 'Tersalin!' : 'Copy Code'}</span>
-                </button>
-                <button
-                  className="btn btn-ghost btn-sm"
-                  onClick={initWalletConnect}
-                  style={{ justifyContent: 'center', gap: 6, fontSize: 12 }}
-                >
-                  <span>🔄 Refresh QR</span>
-                </button>
-              </div>
-
-              {/* Direct Deep Links for Mobile */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-                <a
-                  href={qrUri ? `https://link.trustwallet.com/wc?uri=${encodeURIComponent(qrUri)}` : `https://link.trustwallet.com/open_url?url=${encodeURIComponent(typeof window !== 'undefined' ? window.location.href : '')}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn btn-ghost btn-sm"
-                  style={{ justifyContent: 'center', fontSize: 11.5, gap: 5, textDecoration: 'none', color: 'inherit' }}
-                >
-                  <LogoTrust size={15} />
-                  <span>Buka di Trust</span>
-                </a>
-                <a
-                  href={qrUri ? `https://metamask.app.link/wc?uri=${encodeURIComponent(qrUri)}` : `https://metamask.app.link/dapp/${typeof window !== 'undefined' ? window.location.host + window.location.pathname : ''}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn btn-ghost btn-sm"
-                  style={{ justifyContent: 'center', fontSize: 11.5, gap: 5, textDecoration: 'none', color: 'inherit' }}
-                >
-                  <IconWallet size={15} />
-                  <span>Buka di MetaMask</span>
-                </a>
-              </div>
-
-              {/* Fast-path fallback for instantaneous testing */}
-              <button
-                className="btn btn-primary btn-sm"
-                onClick={async () => {
-                  await setCustomSession('0x71C8A6992E991C2AcC5B09E962cD619554e73A9F', 56)
-                  onClose()
-                }}
-                style={{ width: '100%', justifyContent: 'center', marginTop: 4, fontWeight: 800 }}
-              >
-                ⚡ Approve Simulated Mobile Scan (Instan)
-              </button>
-            </div>
-          </div>
-        ) : (
           <div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -733,7 +522,7 @@ function ConnectWalletModal({ onClose }: { onClose: () => void }) {
             </div>
 
             <p style={{ fontSize: 13, color: 'var(--c-text-2)', lineHeight: 1.5, margin: '0 0 18px' }}>
-              Connect your non-custodial Web3 wallet. Aureus never holds your private keys; all orders and safety scans route directly through your wallet.
+              Connect your non-custodial Web3 wallet. Powered by official Reown Web3Modal & WalletConnect v2 for seamless Trust Wallet & MetaMask scanning.
             </p>
 
             {errorMsg && (
@@ -743,25 +532,27 @@ function ConnectWalletModal({ onClose }: { onClose: () => void }) {
             )}
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {/* 1. WalletConnect (Scan QR Code) */}
+              {/* 1. Official WalletConnect Modal */}
               <button
                 className="cp-wallet-opt"
                 onClick={() => handleSelect('walletconnect')}
-                disabled={isConnecting}
-                style={{ background: 'rgba(59, 153, 252, 0.05)', borderColor: 'rgba(59, 153, 252, 0.25)' }}
+                disabled={isConnecting || isLaunchingAppKit}
+                style={{ background: 'rgba(59, 153, 252, 0.07)', borderColor: 'rgba(59, 153, 252, 0.35)' }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <span className="cp-wallet-logo" style={{ color: '#3B99FC', background: 'rgba(59, 153, 252, 0.12)' }}>
+                  <span className="cp-wallet-logo" style={{ color: '#3B99FC', background: 'rgba(59, 153, 252, 0.15)' }}>
                     <LogoWalletConnect size={20} />
                   </span>
                   <div style={{ textAlign: 'left' }}>
-                    <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--c-text)' }}>WalletConnect (Scan QR)</div>
-                    <div style={{ fontSize: 11.5, color: 'var(--c-muted)' }}>Scan with Trust Wallet, Binance, or phone camera</div>
+                    <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--c-text)' }}>
+                      {isLaunchingAppKit ? 'Opening Web3Modal...' : 'WalletConnect (Official AppKit)'}
+                    </div>
+                    <div style={{ fontSize: 11.5, color: 'var(--c-muted)' }}>Scan QR with Trust Wallet, MetaMask, Rainbow</div>
                   </div>
                 </div>
                 <span className="cp-tag-mini" style={{ background: 'rgba(59,153,252,0.15)', color: '#3B99FC', fontWeight: 800, padding: '3px 8px', borderRadius: 6, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                   <IconQrCode size={12} />
-                  <span>QR CODE</span>
+                  <span>OFFICIAL QR</span>
                 </span>
               </button>
 
@@ -769,7 +560,7 @@ function ConnectWalletModal({ onClose }: { onClose: () => void }) {
               <button
                 className="cp-wallet-opt"
                 onClick={() => handleSelect('trust')}
-                disabled={isConnecting}
+                disabled={isConnecting || isLaunchingAppKit}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <span className="cp-wallet-logo" style={{ color: '#FCD535', background: 'rgba(252,213,53,0.1)' }}>
@@ -777,11 +568,11 @@ function ConnectWalletModal({ onClose }: { onClose: () => void }) {
                   </span>
                   <div style={{ textAlign: 'left' }}>
                     <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--c-text)' }}>Trust Wallet</div>
-                    <div style={{ fontSize: 11.5, color: 'var(--c-muted)' }}>Official BNB Ecosystem · Recommended</div>
+                    <div style={{ fontSize: 11.5, color: 'var(--c-muted)' }}>Official BNB Ecosystem · Browser & Mobile App</div>
                   </div>
                 </div>
                 <span className="cp-tag-mini" style={{ background: 'rgba(240,185,11,0.14)', color: 'var(--c-primary)', fontWeight: 800, padding: '3px 8px', borderRadius: 6 }}>
-                  {hasTrust ? 'DETECTED' : 'POPULAR'}
+                  {hasTrust ? 'EXTENSION READY' : 'RECOMMENDED'}
                 </span>
               </button>
 
@@ -789,7 +580,7 @@ function ConnectWalletModal({ onClose }: { onClose: () => void }) {
               <button
                 className="cp-wallet-opt"
                 onClick={() => handleSelect('metamask')}
-                disabled={isConnecting}
+                disabled={isConnecting || isLaunchingAppKit}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <span className="cp-wallet-logo" style={{ color: '#F6851B', background: 'rgba(246,133,27,0.1)' }}>
@@ -802,7 +593,7 @@ function ConnectWalletModal({ onClose }: { onClose: () => void }) {
                 </div>
                 {hasInjected && (
                   <span className="cp-tag-mini" style={{ background: 'rgba(2,192,118,0.12)', color: 'var(--green)', fontWeight: 800, padding: '3px 8px', borderRadius: 6 }}>
-                    ACTIVE
+                    EXTENSION READY
                   </span>
                 )}
               </button>
@@ -811,7 +602,7 @@ function ConnectWalletModal({ onClose }: { onClose: () => void }) {
               <button
                 className="cp-wallet-opt"
                 onClick={() => handleSelect('binance')}
-                disabled={isConnecting}
+                disabled={isConnecting || isLaunchingAppKit}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                   <span className="cp-wallet-logo" style={{ color: 'var(--c-primary)', background: 'rgba(240,185,11,0.1)' }}>
@@ -828,7 +619,7 @@ function ConnectWalletModal({ onClose }: { onClose: () => void }) {
               <button
                 className="cp-wallet-opt"
                 onClick={() => handleSelect('demo')}
-                disabled={isConnecting}
+                disabled={isConnecting || isLaunchingAppKit}
                 style={{ border: '1px dashed var(--c-primary)', background: 'rgba(240,185,11,0.04)' }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -837,11 +628,11 @@ function ConnectWalletModal({ onClose }: { onClose: () => void }) {
                   </span>
                   <div style={{ textAlign: 'left' }}>
                     <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--c-primary)' }}>Simulated Demo Wallet</div>
-                    <div style={{ fontSize: 11.5, color: 'var(--c-muted)' }}>Test connected state without browser extension</div>
+                    <div style={{ fontSize: 11.5, color: 'var(--c-muted)' }}>Instant 1-click test with 1.845 BNB balance</div>
                   </div>
                 </div>
                 <span className="cp-tag-mini" style={{ background: 'rgba(240,185,11,0.2)', color: 'var(--c-primary)', fontWeight: 800, padding: '3px 8px', borderRadius: 6 }}>
-                  ONE TAP
+                  INSTANT
                 </span>
               </button>
             </div>
@@ -859,7 +650,6 @@ function ConnectWalletModal({ onClose }: { onClose: () => void }) {
               </a>
             </div>
           </div>
-        )}
         </div>
       </div>
     </div>,
