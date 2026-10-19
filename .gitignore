@@ -31,7 +31,6 @@ core/skills/risk-budgeted-allocator/output/*
 *.sqlite3
 state/
 *.log
-scripts/generate_git_history.py
 
 # Python
 __pycache__/
