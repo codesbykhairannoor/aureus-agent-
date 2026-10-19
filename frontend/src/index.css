@@ -259,7 +259,6 @@ html.compete-active ::-webkit-scrollbar { width: 10px; height: 10px; display: bl
   font-family: var(--cp-font);
   min-height: 100vh;
   position: relative;
-  overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   transition: background-color .45s ease, color .45s ease;
@@ -1678,15 +1677,23 @@ html.compete-active ::-webkit-scrollbar { width: 10px; height: 10px; display: bl
 
 /* ─────────── Marketing Top Navigation ─────────── */
 .compete-root .cp-mkt-nav {
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  background: color-mix(in srgb, var(--c-bg) 88%, transparent);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(240, 185, 11, 0.16);
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.45);
+  position: sticky !important;
+  top: 0 !important;
+  left: 0;
+  right: 0;
+  width: 100%;
+  z-index: 1000 !important;
+  background: rgba(11, 14, 17, 0.88) !important;
+  backdrop-filter: blur(20px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+  border-bottom: 1px solid rgba(240, 185, 11, 0.18) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5) !important;
   transition: all .24s ease;
+}
+.compete-root[data-theme="daylight"] .cp-mkt-nav {
+  background: rgba(248, 249, 250, 0.92) !important;
+  border-bottom: 1px solid #e2e6eb !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08) !important;
 }
 .compete-root .cp-mkt-inner {
   max-width: 1320px;
