@@ -449,7 +449,7 @@ html.compete-active ::-webkit-scrollbar { width: 10px; height: 10px; display: bl
   content: ""; display: block; width: 92px; height: 2px; margin-top: 12px; border-radius: 2px;
   background: linear-gradient(90deg, var(--gold), color-mix(in srgb, var(--gold) 10%, transparent));
 }
-/* the gold AEGIS tag worn by every seat */
+/* the gold Aureus tag worn by every seat */
 .compete-root .cp-aegis-tag {
   font-size: 9.5px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase;
   color: var(--gold); background: color-mix(in srgb, var(--gold) 12%, transparent);
@@ -702,7 +702,7 @@ html.compete-active ::-webkit-scrollbar { width: 10px; height: 10px; display: bl
 .compete-root table.cmc tbody tr:hover { background: var(--c-fill); }
 .compete-root table.cmc tbody tr:last-child td { border-bottom: none; }
 /* phones: drop the secondary columns and compact the cells so the core audit
-   (#, token, price, 24h, AEGIS, verdict) fits the screen with no clipping. */
+   (#, token, price, 24h, Aureus, verdict) fits the screen with no clipping. */
 @media (max-width: 600px) {
   .compete-root .cmc-hide-sm { display: none; }
   .compete-root table.cmc { font-size: 12.5px; }
@@ -1366,7 +1366,7 @@ html.compete-active ::-webkit-scrollbar { width: 10px; height: 10px; display: bl
   .compete-root .cp-web-edge.on { animation: none; stroke-dasharray: none; }
 }
 
-/* ─────────────── AEGIS Omni Signal · the flagship live chain ─────────────── */
+/* ─────────────── Aureus Omni Signal · the flagship live chain ─────────────── */
 .compete-root .cp-omni {
   border-radius: 16px; border: 1px solid var(--c-line); background: var(--c-panel);
   padding: 16px; display: flex; flex-direction: column; gap: 14px;

@@ -1,4 +1,4 @@
-# AEGIS · The Verifiable Trading Agent
+# Aureus Protocol · The Verifiable Trading Agent
 
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Network](https://img.shields.io/badge/network-BSC%20mainnet-F0B90B)
@@ -11,7 +11,7 @@
 > **BNB HACK · AI Trading Agent Edition**.
 
 A trading track record is normally something you have to *believe*. A screenshot,
-a Telegram message, a curve that could have been drawn after the fact. AEGIS
+a Telegram message, a curve that could have been drawn after the fact. Aureus Protocol
 takes the opposite stance: the agent **commits to a sealed prediction in a BSC
 mainnet contract before the move happens**, reveals it after, and anchors its
 equity to a contract that halts trading the moment a drawdown limit is crossed.
@@ -28,7 +28,7 @@ halts trading the moment an equity floor is crossed, and a **fail-closed
 pre-trade security gate** that must clear every spend before anything is signed.
 Everything else · the signal fusion, the CMC strategy skills, the UVII index,
 the six-expert council, ERC-8004 identity and the x402 feed · exists to feed and
-support those three. AEGIS fuses many independent market signals into a single
+support those three. Aureus Protocol fuses many independent market signals into a single
 conviction score, sizes a position with a drawdown-budgeted fractional-Kelly
 engine, clears every spend through that security gate, and publishes a verifiable
 proof for each decision. It runs three things at once:
@@ -60,7 +60,7 @@ market data ─▶ ten-source signal fusion ─▶ net-of-cost edge gate
            security gate (6 core checks + advisory reads) ─▶ commit-reveal proof ─▶ trade
 ```
 
-1. **Signal fusion** blends ten weighted sources · the AEGIS signal score, a
+1. **Signal fusion** blends ten weighted sources · the Aureus Protocol signal score, a
    deep composite, the Brain ML ensemble, Kronos forecasts, cross-venue order
    flow, the CoinMarketCap regime / technicals / derivatives gates and a
    per-asset funding contrarian · into one direction and conviction.
@@ -101,7 +101,7 @@ direction-aware. Nothing is signed until both execute flags are set.
 
 ## What makes it trustworthy
 
-A trading agent is easy to claim and hard to trust. AEGIS closes that gap on
+A trading agent is easy to claim and hard to trust. Aureus Protocol closes that gap on
 three fronts at once. Its edge is **measured, not asserted**: every signal is
 fitted against the private base of resolved outcomes (root sealed on BSC mainnet,
 see *Verifiable dataset commitment*), so the sizing engine works from real win
@@ -166,7 +166,7 @@ and that the stored outcome labels match the public scoring rule.
 
 ```bash
 # Docker (nothing to install but Docker):
-docker build -t aegis-verify . && docker run --rm aegis-verify
+docker build -t aureus-verify . && docker run --rm aureus-verify
 
 # or local Python:
 python3 -m venv .venv && . .venv/bin/activate && pip install -r requirements.txt && sh scripts/verify_offline.sh
@@ -185,7 +185,7 @@ cp .env.example .env      # fill in your own values; defaults run in paper mode
 #    (the production book of labeled outcomes is private and gitignored).
 #    Point every component at it with one env var (default is data/signal.db).
 python3 bnbhack/data/make_sample_db.py
-export AEGIS_SIGNAL_DB="$PWD/bnbhack/data/signal.db"
+export AUREUS_SIGNAL_DB="$PWD/bnbhack/data/signal.db"
 
 # 3. Verify the engine: drawdown-budget guarantee + direction-aware PnL
 python3 -m unittest discover -s bnbhack/tests
@@ -235,7 +235,7 @@ link you can open by hand. It exits `0` only when all checks pass.
 Point it at a local cockpit instead of the public edge with one env var:
 
 ```bash
-AEGIS_API_BASE=http://127.0.0.1:8401 bash scripts/verify_live.sh
+AUREUS_API_BASE=http://127.0.0.1:8401 bash scripts/verify_live.sh
 ```
 
 ### A note on the data and the frontend
@@ -245,7 +245,7 @@ AEGIS_API_BASE=http://127.0.0.1:8401 bash scripts/verify_live.sh
   schema and a seeded, clearly-synthetic sample generator so anyone can run the
   full pipeline locally without it. See `bnbhack/data/README.md`.
 - **`frontend/compete/` is an excerpt, not a standalone app.** It is the
-  jury-facing presentation that lives inside the larger AEGIS terminal, included
+  jury-facing presentation that lives inside the larger Aureus Protocol terminal, included
   here as source for review. It reads from the cockpit API in step 5 and is not
   meant to be built in isolation.
 
@@ -325,12 +325,12 @@ demonstrate out of sample.
 
 ## Security
 
-AEGIS can move money, so it is built to fail safe. It signs nothing until two
+Aureus Protocol can move money, so it is built to fail safe. It signs nothing until two
 separate flags are set, clears every spend through a fail-closed security gate,
 talks only to a loopback proxy and an allowlisted set of RPC hosts, and anchors
 its equity to a contract that halts trading when a drawdown budget is breached.
 For transparency during the judged window, you can subscribe to the agent's
-trade feed via `@aegisagent_bot` (start `?start=agentfeed`). Each leg is then
+trade feed via `@aureusagent_bot` (start `?start=agentfeed`). Each leg is then
 delivered to your own Telegram chat with a BscScan link and nothing else · the
 feed is read-only, carries no keys or commands, and is fanned out per subscriber
 by `bnbhack/agent/notify.py`.
@@ -340,22 +340,22 @@ The full posture, threat model and disclosure process are in
 
 ---
 
-## Acknowledgements · the AEGIS open stack
+## Acknowledgements · the Aureus Protocol open stack
 
-This agent does not stand alone. It draws on the broader AEGIS stack, published
+This agent does not stand alone. It draws on the broader Aureus Protocol stack, published
 as open source in sibling repositories. The signal feed it fuses as its primary
 source, the indicator and risk research behind the composite read and the sizing
 engine, the walk-forward backtest tooling and the market-intelligence MCP servers
 all live in their own repos:
 
-- [`aegis-signal-engine`](https://github.com/khairking6/aegis-signal-engine) · the AEGIS signal feed
-- [`aegis-engine`](https://github.com/khairking6/aegis-engine) · the core inference engine
-- [`aegis-risk-ai`](https://github.com/khairking6/aegis-risk-ai) · risk and drawdown research
-- [`aegis-indicators`](https://github.com/khairking6/aegis-indicators) · the technical indicator library
-- [`aegis-backtest`](https://github.com/khairking6/aegis-backtest) · walk-forward backtest tooling
+- [`aureus-signal-engine`](https://github.com/khairking6/aureus-signal-engine) · the Aureus Protocol signal feed
+- [`aureus-engine`](https://github.com/khairking6/aureus-engine) · the core inference engine
+- [`aureus-risk-ai`](https://github.com/khairking6/aureus-risk-ai) · risk and drawdown research
+- [`aureus-indicators`](https://github.com/khairking6/aureus-indicators) · the technical indicator library
+- [`aureus-backtest`](https://github.com/khairking6/aureus-backtest) · walk-forward backtest tooling
 - [`binance-intelligence-mcp`](https://github.com/khairking6/binance-intelligence-mcp) · market-intelligence MCP server
 - [`bnbchain-mcp`](https://github.com/khairking6/bnbchain-mcp) · BNB Chain MCP tooling
-- [`aegis-python-sdk`](https://github.com/khairking6/aegis-python-sdk) · [`aegis-cli`](https://github.com/khairking6/aegis-cli) · client SDK and CLI
+- [`aureus-python-sdk`](https://github.com/khairking6/aureus-python-sdk) · [`aureus-cli`](https://github.com/khairking6/aureus-cli) · client SDK and CLI
 
 The full set is published under [github.com/codesbykhairannoor/aureus-agent-](https://github.com/codesbykhairannoor/aureus-agent-).
 

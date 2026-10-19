@@ -18,7 +18,7 @@ export const TERMINAL_URL = '/terminal'
 export const AGENT_CARD_URL = '/agent-card'
 export const COMPETITION = 'Aureus Protocol · Autonomous Trading Infrastructure'
 // Per-user Telegram bot subscription for the agent's trade feed.
-export const TELEGRAM_FEED_URL = 'https://t.me/aegisnews_bot?start=agentfeed'
+export const TELEGRAM_FEED_URL = 'https://t.me/aureusagent_bot?start=agentfeed'
 
 /* Verified BSC deployments + identities, all live on BSC mainnet (chain 56):
    the result ledger, the ERC-8004 identity, the commit reveal registry, the

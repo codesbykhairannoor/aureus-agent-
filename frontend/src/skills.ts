@@ -15,7 +15,7 @@ export type SkillDef = {
   group: SkillGroup
   kind: SkillKind
   summary: string          // one line, what it is
-  what: string             // what AEGIS does with it
+  what: string             // what Aureus does with it
   inputs?: string
   outputs?: string
   invoke?: string          // the literal call / command / address

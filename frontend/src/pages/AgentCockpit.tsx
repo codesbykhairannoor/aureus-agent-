@@ -175,7 +175,7 @@ export default function AgentCockpit({ go }: { go: (p: string) => void }) {
       </div>
     </Reveal>
 
-    {/* verified AEGIS signals · entered trades and how they resolved */}
+    {/* verified Aureus signals · entered trades and how they resolved */}
     <Reveal delay={80}>
       <div style={{ marginTop: 28 }}>
         <SignalResults recent={recent} />
@@ -730,7 +730,7 @@ function PerfAttribution({ st }: { st?: LoopEnvelope['state'] }) {
   </Panel>
 }
 
-/* ─────────────── verified AEGIS signals · entered trades + outcomes ─────────────── */
+/* ─────────────── verified Aureus signals · entered trades + outcomes ─────────────── */
 function ago(ts: number): string {
   const s = Math.max(0, Math.floor(Date.now() / 1000 - ts))
   if (s < 60) return `${s}s ago`

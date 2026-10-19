@@ -168,7 +168,7 @@ export async function fetchRecentSignals(limit = 24, symbols?: string[], signal?
   return apiGet<RecentSignals>(`/signals/recent?${q.toString()}`, signal)
 }
 
-/* ─────────────── multi AI expert debate (aegis-engine, no auth) ─────────────── */
+/* ─────────────── multi AI expert debate (aureus-engine, no auth) ─────────────── */
 export type DebateKeyData = {
   entry?: number; target?: number; stoploss?: number
   risk_reward?: number; composite_score?: number; [k: string]: unknown
@@ -310,7 +310,7 @@ export async function fetchOrderFlow(symbol: string, signal?: AbortSignal): Prom
 }
 
 /* ─────────────── wallet approval guard (live, Moralis-backed allowance scan) ───────────────
-   AEGIS's own wallet safety check, the same scan the terminal runs before the
+   Aureus's own wallet safety check, the same scan the terminal runs before the
    agent ever asks Trust Wallet to sign. It reads every live ERC-20 allowance a
    wallet has granted on BSC, flags unlimited approvals and possible spam tokens,
    and ranks each by the USD it puts at risk. Real chain data, no fabrication.
@@ -372,7 +372,7 @@ export async function fetchWalletGuard(address: string, signal?: AbortSignal): P
   return { address: addr, scanned: out.length, risky, unlimited: unlimitedN, spam: spamN, usdAtRisk, approvals: out }
 }
 
-/* ─────────────── Arena (shared roster of competing AEGIS agents) ─────────────── */
+/* ─────────────── Arena (shared roster of competing Aureus agents) ─────────────── */
 export type ArenaAgent = {
   agent_id: string; name: string; agent_type: string
   total_predictions: number; correct: number; wrong: number; pending: number
