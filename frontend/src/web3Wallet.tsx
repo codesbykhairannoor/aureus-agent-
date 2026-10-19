@@ -15,6 +15,7 @@ export interface Web3WalletContextType {
   disconnect: () => void
   isBsc: boolean
   switchNetwork: () => Promise<void>
+  setCustomSession: (addr: string, chainId?: number, prov?: any) => Promise<void>
 }
 
 const Web3WalletContext = createContext<Web3WalletContextType | null>(null)
@@ -65,28 +66,55 @@ export function Web3WalletProvider({ children }: { children: ReactNode }) {
     }
   })
   const [balance, setBalance] = useState<string | null>(null)
+  const [providerInstance, setProviderInstance] = useState<any>(null)
   const [isConnecting, setIsConnecting] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
 
   const isBsc = chainId === 56
 
-  const fetchBalance = useCallback(async (addr: string, provider: any) => {
+  const fetchBalance = useCallback(async (addr: string, prov?: any) => {
+    const p = prov || providerInstance || getInjectedProvider()
+    if (p?.request) {
+      try {
+        const hexBal = await p.request({
+          method: 'eth_getBalance',
+          params: [addr, 'latest'],
+        })
+        if (hexBal) {
+          const val = parseInt(hexBal, 16) / 1e18
+          setBalance(`${val.toFixed(3)} BNB`)
+          return
+        }
+      } catch {
+        /* fallback to public RPC */
+      }
+    }
+
     try {
-      const hexBal = await provider.request({
-        method: 'eth_getBalance',
-        params: [addr, 'latest'],
+      const res = await fetch(BSC_RPC_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'eth_getBalance',
+          params: [addr, 'latest'],
+        }),
       })
-      if (hexBal) {
-        const val = parseInt(hexBal, 16) / 1e18
+      const data = await res.json()
+      if (data?.result) {
+        const val = parseInt(data.result, 16) / 1e18
         setBalance(`${val.toFixed(3)} BNB`)
+        return
       }
     } catch {
-      setBalance('0.000 BNB')
+      /* ignore */
     }
-  }, [])
+    setBalance('0.000 BNB')
+  }, [providerInstance])
 
   const switchNetwork = useCallback(async () => {
-    const provider = getInjectedProvider()
+    const provider = providerInstance || getInjectedProvider()
     if (!provider) return
     try {
       await provider.request({
@@ -105,7 +133,7 @@ export function Web3WalletProvider({ children }: { children: ReactNode }) {
         }
       }
     }
-  }, [])
+  }, [providerInstance])
 
   const connect = useCallback(async (walletType?: string): Promise<boolean> => {
     setIsConnecting(true)
@@ -178,20 +206,71 @@ export function Web3WalletProvider({ children }: { children: ReactNode }) {
     }
   }, [fetchBalance])
 
+  const setCustomSession = useCallback(async (addr: string, chainIdNum: number = 56, prov?: any) => {
+    setAccount(addr)
+    setChainId(chainIdNum)
+    if (prov) {
+      setProviderInstance(prov)
+    }
+    try {
+      localStorage.setItem('aureus_wallet_account', addr)
+      localStorage.setItem('aureus_wallet_chain', String(chainIdNum))
+      localStorage.setItem('aureus_wallet_type', prov ? 'walletconnect' : 'custom')
+    } catch { /* ignore */ }
+    await fetchBalance(addr, prov)
+  }, [fetchBalance])
+
   const disconnect = useCallback(() => {
+    if (providerInstance?.disconnect) {
+      try {
+        providerInstance.disconnect()
+      } catch { /* ignore */ }
+    }
+    setProviderInstance(null)
     setAccount(null)
     setChainId(null)
     setBalance(null)
     try {
       localStorage.removeItem('aureus_wallet_account')
       localStorage.removeItem('aureus_wallet_chain')
+      localStorage.removeItem('aureus_wallet_type')
     } catch { /* ignore */ }
-  }, [])
+  }, [providerInstance])
 
   // Auto-connect on load if previously connected
   useEffect(() => {
     if (!account) return
     if (account.startsWith('0x71C8A6992E991C2')) return // demo account preserved
+    const wType = typeof window !== 'undefined' ? localStorage.getItem('aureus_wallet_type') : null
+    
+    if (wType === 'walletconnect') {
+      import('@walletconnect/ethereum-provider').then(async ({ EthereumProvider }) => {
+        try {
+          const provider = await EthereumProvider.init({
+            projectId: import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || 'c0891d12d1bca7289e089af886e1945b',
+            chains: [56],
+            optionalChains: [56, 1, 97],
+            showQrModal: false,
+            metadata: {
+              name: 'Aureus Sentinel AI',
+              description: 'AI-Powered BSC Sentinel & Trading Terminal',
+              url: typeof window !== 'undefined' ? window.location.origin : 'https://aureus-agent.vercel.app',
+              icons: ['https://bin.bnbstatic.com/static/images/common/favicon.ico'],
+            },
+          })
+          if (provider.connected && provider.accounts?.length > 0) {
+            setProviderInstance(provider)
+            fetchBalance(provider.accounts[0], provider)
+          } else {
+            disconnect()
+          }
+        } catch {
+          // keep cached account
+        }
+      }).catch(() => {})
+      return
+    }
+
     const provider = getInjectedProvider()
     if (!provider) return
 
@@ -247,6 +326,7 @@ export function Web3WalletProvider({ children }: { children: ReactNode }) {
         disconnect,
         isBsc,
         switchNetwork,
+        setCustomSession,
       }}
     >
       {children}
@@ -287,42 +367,127 @@ function IconQrCode({ size = 18 }: { size?: number }) {
 
 /* ═══════════════ CONNECT WALLET MODAL ═══════════════ */
 function ConnectWalletModal({ onClose }: { onClose: () => void }) {
-  const { connect, isConnecting } = useWeb3Wallet()
+  const { connect, isConnecting, setCustomSession } = useWeb3Wallet()
   const [view, setView] = useState<'list' | 'qr'>('list')
   const [qrCodeUrl, setQrCodeUrl] = useState<string>('')
   const [qrUri, setQrUri] = useState<string>('')
   const [copied, setCopied] = useState<boolean>(false)
   const [errorMsg, setErrorMsg] = useState('')
+  const [wcState, setWcState] = useState<'idle' | 'initializing' | 'waiting' | 'connected' | 'error'>('idle')
+  const [wcStatusText, setWcStatusText] = useState('')
+  const wcProviderRef = useRef<any>(null)
+  const isConnectingWc = useRef<boolean>(false)
   const anyWin = typeof window !== 'undefined' ? (window as any) : {}
 
   const hasInjected = typeof window !== 'undefined' && !!anyWin.ethereum
   const hasTrust = typeof window !== 'undefined' && (!!anyWin.trustwallet || !!anyWin.ethereum?.isTrust)
 
+  const initWalletConnect = async () => {
+    setView('qr')
+    setErrorMsg('')
+    setWcState('initializing')
+    setWcStatusText('Connecting to WalletConnect v2 relay...')
+
+    try {
+      const { EthereumProvider } = await import('@walletconnect/ethereum-provider')
+      const projId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || 'c0891d12d1bca7289e089af886e1945b'
+
+      let provider = wcProviderRef.current
+      if (!provider) {
+        provider = await EthereumProvider.init({
+          projectId: projId,
+          chains: [56],
+          optionalChains: [56, 1, 97],
+          showQrModal: false,
+          metadata: {
+            name: 'Aureus Sentinel AI',
+            description: 'AI-Powered BSC Sentinel & Trading Terminal',
+            url: typeof window !== 'undefined' ? window.location.origin : 'https://aureus-agent.vercel.app',
+            icons: ['https://bin.bnbstatic.com/static/images/common/favicon.ico'],
+          },
+        })
+        wcProviderRef.current = provider
+
+        provider.on('display_uri', async (uri: string) => {
+          setQrUri(uri)
+          try {
+            const url = await QRCode.toDataURL(uri, {
+              width: 230,
+              margin: 1,
+              color: { dark: '#080A0F', light: '#FFFFFF' },
+            })
+            setQrCodeUrl(url)
+            setWcState('waiting')
+            setWcStatusText('Live relay paired! Scan with Trust Wallet or MetaMask.')
+          } catch {
+            setErrorMsg('Failed to render QR code image')
+          }
+        })
+
+        provider.on('disconnect', () => {
+          setWcState('idle')
+          setQrCodeUrl('')
+          setQrUri('')
+        })
+      }
+
+      // If already connected with an existing session
+      if (provider.connected && provider.accounts && provider.accounts.length > 0) {
+        setWcState('connected')
+        setWcStatusText('Active session restored! Connecting...')
+        await setCustomSession(provider.accounts[0], provider.chainId || 56, provider)
+        setTimeout(() => onClose(), 400)
+        return
+      }
+
+      if (isConnectingWc.current) return
+      isConnectingWc.current = true
+
+      try {
+        await provider.connect()
+        if (provider.accounts && provider.accounts.length > 0) {
+          setWcState('connected')
+          setWcStatusText('Approval confirmed! Syncing wallet balance...')
+          await setCustomSession(provider.accounts[0], provider.chainId || 56, provider)
+          setTimeout(() => onClose(), 600)
+        }
+      } catch (err: any) {
+        console.warn('WalletConnect handshake:', err)
+        if (err?.message?.includes('User rejected') || err?.message?.includes('User disapproved')) {
+          setWcState('error')
+          setWcStatusText('Connection rejected in mobile wallet.')
+        } else if (err?.message?.includes('Connection interrupted') || err?.message?.includes('WebSocket')) {
+          setWcState('error')
+          setWcStatusText('Relay connection error. Tap Simulated Scan or check network.')
+        }
+      } finally {
+        isConnectingWc.current = false
+      }
+    } catch (e: any) {
+      console.error('WalletConnect initialization error:', e)
+      setWcState('error')
+      setWcStatusText('Failed to establish WalletConnect relay.')
+      setErrorMsg('Could not connect to WalletConnect relay. Use Simulated Scan below.')
+    }
+  }
+
   const handleSelect = async (type: string) => {
     setErrorMsg('')
     if (type === 'walletconnect') {
-      const projId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || 'c0891d12d1bca7289e089af886e1945b'
-      const fakeTopic = Math.random().toString(36).substring(2, 10) + Date.now().toString(36)
-      const uri = `wc:${fakeTopic}@2?relay-protocol=irn&symKey=71c8a6992e991c2acc5b09e962cd619554e73a9f&projectId=${projId}`
-      setQrUri(uri)
-      try {
-        const url = await QRCode.toDataURL(uri, {
-          width: 220,
-          margin: 1,
-          color: { dark: '#0B0E11', light: '#FFFFFF' },
-        })
-        setQrCodeUrl(url)
-        setView('qr')
-      } catch {
-        setErrorMsg('Failed to generate QR code')
-      }
+      await initWalletConnect()
+      return
+    }
+
+    if (type === 'demo') {
+      await setCustomSession('0x71C8A6992E991C2AcC5B09E962cD619554e73A9F', 56)
+      onClose()
       return
     }
 
     const ok = await connect(type)
-    if (!ok && type !== 'demo') {
+    if (!ok) {
       if (!hasInjected && !hasTrust) {
-        setErrorMsg('No browser wallet detected. You can scan the QR code with your phone, or tap "Demo Wallet".')
+        setErrorMsg('No browser wallet extension detected. Scan the QR code with your phone or use Demo Wallet.')
       } else {
         setErrorMsg('Connection request was declined or timed out.')
       }
@@ -403,38 +568,79 @@ function ConnectWalletModal({ onClose }: { onClose: () => void }) {
             <div style={{ textAlign: 'center', marginBottom: 16 }}>
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '4px 10px', borderRadius: 999, background: 'rgba(59,153,252,0.12)', border: '1px solid rgba(59,153,252,0.3)', marginBottom: 8 }}>
                 <LogoWalletConnect size={16} />
-                <span style={{ fontSize: 11.5, fontWeight: 800, color: '#3B99FC' }}>WalletConnect v2 · BNB Chain</span>
+                <span style={{ fontSize: 11.5, fontWeight: 800, color: '#3B99FC' }}>WalletConnect v2 Relay · BNB Chain (56)</span>
               </div>
               <h3 style={{ margin: 0, fontSize: 18, fontWeight: 900, color: 'var(--c-text)' }}>Scan QR with Mobile Wallet</h3>
               <p style={{ margin: '6px 0 0', fontSize: 12.5, color: 'var(--c-text-2)', lineHeight: 1.5 }}>
-                Open Trust Wallet, Binance, or MetaMask app on your phone and scan with your camera.
+                Open Trust Wallet, Binance, or MetaMask on your phone and scan this code with your camera.
               </p>
             </div>
 
             {/* QR Code Graphic Frame */}
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 16 }}>
               <div style={{ padding: 12, background: '#ffffff', borderRadius: 16, border: '2px solid var(--c-primary)', boxShadow: '0 12px 36px rgba(240,185,11,0.22)', position: 'relative' }}>
                 {qrCodeUrl ? (
-                  <img src={qrCodeUrl} alt="WalletConnect QR Code" style={{ width: 210, height: 210, display: 'block', borderRadius: 6 }} />
+                  <img src={qrCodeUrl} alt="WalletConnect QR Code" style={{ width: 220, height: 220, display: 'block', borderRadius: 6 }} />
                 ) : (
-                  <div style={{ width: 210, height: 210, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000', fontSize: 12 }}>Generating QR…</div>
+                  <div style={{ width: 220, height: 220, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#181a20', gap: 12, textAlign: 'center', padding: 16 }}>
+                    <span className="cp-spinner" style={{ width: 34, height: 34 }} />
+                    <span style={{ fontSize: 12, fontWeight: 700, color: '#474D57' }}>
+                      {wcStatusText || 'Connecting to relay.walletconnect.org…'}
+                    </span>
+                  </div>
                 )}
+              </div>
+
+              {/* Status pill under QR */}
+              <div style={{
+                marginTop: 12,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 7,
+                padding: '5px 14px',
+                borderRadius: 999,
+                background: wcState === 'connected' ? 'rgba(14,203,129,0.15)' : wcState === 'waiting' ? 'rgba(59,153,252,0.15)' : 'rgba(240,185,11,0.15)',
+                border: `1px solid ${wcState === 'connected' ? 'var(--green)' : wcState === 'waiting' ? '#3B99FC' : 'var(--c-primary)'}`,
+                fontSize: 12,
+                fontWeight: 700,
+                color: wcState === 'connected' ? 'var(--green)' : wcState === 'waiting' ? '#60a5fa' : 'var(--c-primary)'
+              }}>
+                <span style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: '50%',
+                  background: wcState === 'connected' ? 'var(--green)' : wcState === 'waiting' ? '#3B99FC' : 'var(--c-primary)',
+                  display: 'inline-block',
+                  boxShadow: '0 0 8px currentColor'
+                }} />
+                <span>
+                  {wcStatusText || (qrCodeUrl ? 'Awaiting confirmation in mobile wallet…' : 'Establishing live handshake…')}
+                </span>
               </div>
             </div>
 
+            {errorMsg && (
+              <div style={{ padding: '8px 12px', background: 'rgba(248,73,96,0.12)', border: '1px solid var(--red)', borderRadius: 8, fontSize: 12, color: 'var(--red)', marginBottom: 12, textAlign: 'center' }}>
+                {errorMsg}
+              </div>
+            )}
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {/* Copy QR pairing link button */}
               <button
                 className="btn btn-ghost btn-sm"
                 onClick={copyQrUri}
+                disabled={!qrUri}
                 style={{ width: '100%', justifyContent: 'center', gap: 6, fontSize: 12.5 }}
               >
                 {copied ? <IconCheck size={14} style={{ color: 'var(--green)' }} /> : <IconQrCode size={14} />}
-                <span>{copied ? 'Pairing Link Copied to Clipboard!' : 'Copy QR Pairing Code'}</span>
+                <span>{copied ? 'Pairing Code Copied to Clipboard!' : 'Copy Pairing Code'}</span>
               </button>
 
+              {/* Direct Deep Links for Mobile */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
                 <a
-                  href={`https://link.trustwallet.com/open_url?url=${encodeURIComponent(typeof window !== 'undefined' ? window.location.href : '')}`}
+                  href={qrUri ? `https://link.trustwallet.com/wc?uri=${encodeURIComponent(qrUri)}` : `https://link.trustwallet.com/open_url?url=${encodeURIComponent(typeof window !== 'undefined' ? window.location.href : '')}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="btn btn-ghost btn-sm"
@@ -444,7 +650,7 @@ function ConnectWalletModal({ onClose }: { onClose: () => void }) {
                   <span>Open in Trust</span>
                 </a>
                 <a
-                  href={`https://metamask.app.link/dapp/${typeof window !== 'undefined' ? window.location.host + window.location.pathname : ''}`}
+                  href={qrUri ? `https://metamask.app.link/wc?uri=${encodeURIComponent(qrUri)}` : `https://metamask.app.link/dapp/${typeof window !== 'undefined' ? window.location.host + window.location.pathname : ''}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="btn btn-ghost btn-sm"
@@ -455,9 +661,13 @@ function ConnectWalletModal({ onClose }: { onClose: () => void }) {
                 </a>
               </div>
 
+              {/* Fast-path fallback for instantaneous testing */}
               <button
                 className="btn btn-primary btn-sm"
-                onClick={() => { handleSelect('demo'); onClose() }}
+                onClick={async () => {
+                  await setCustomSession('0x71C8A6992E991C2AcC5B09E962cD619554e73A9F', 56)
+                  onClose()
+                }}
                 style={{ width: '100%', justifyContent: 'center', marginTop: 4, fontWeight: 800 }}
               >
                 ⚡ Approve Simulated Mobile Scan
