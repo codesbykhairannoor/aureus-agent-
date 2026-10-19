@@ -1,4 +1,4 @@
-/* Static facts for Aureus Protocol. Contract / wallet addresses are
+/* Static facts for Aureus Agent. Contract / wallet addresses are
    the project's verified BSC deployments: the result ledger, the ERC-8004 identity,
    the commit reveal registry, the RiskGovernor and its keeper all on BSC mainnet.
    Edit GITHUB_URL / DOCS links in one place. */
@@ -16,7 +16,7 @@ export const TERMINAL_URL = '/terminal'
 // agentURI at. Serving it from the same origin keeps the minted identity and the
 // served card from drifting, so it doubles as the agent's public registration.
 export const AGENT_CARD_URL = '/agent-card'
-export const COMPETITION = 'Aureus Protocol · Autonomous Trading Infrastructure'
+export const COMPETITION = 'Aureus Agent · Autonomous Trading Infrastructure'
 // Per-user Telegram bot subscription for the agent's trade feed.
 export const TELEGRAM_FEED_URL = 'https://t.me/aureusagent_bot?start=agentfeed'
 

@@ -1,4 +1,4 @@
-/** Aureus Protocol · Web Application Shell.
+/** Aureus Agent · Web Application Shell.
  *  STRICT AUTHENTICATION SEPARATION:
  *  1. BEFORE LOGIN (!isLoggedIn):
  *     - Only Public Marketing Pages are accessible (Home, Features, How It Works, Ecosystem, Security, Docs).
@@ -153,11 +153,11 @@ function AppShellInner() {
   useEffect(() => {
     const titles: Record<string, string> = {
       '/': 'Aureus Agent · Verifiable Autonomous Trading on BNB Chain',
-      '/features': 'Features & Risk Math · Aureus Protocol',
+      '/features': 'Features & Risk Math · Aureus Agent',
       '/how-it-works': 'How It Works · 4-Stage Execution Lifecycle',
-      '/ecosystem': 'Ecosystem & BSC Deployments · Aureus Protocol',
-      '/security': 'Security & Audit (98/100) · Aureus Protocol',
-      '/docs': 'Whitepaper & Technical Specs · Aureus Protocol',
+      '/ecosystem': 'Ecosystem & BSC Deployments · Aureus Agent',
+      '/security': 'Security & Audit (98/100) · Aureus Agent',
+      '/docs': 'Whitepaper & Technical Specs · Aureus Agent',
       '/terminal': 'Live Terminal · Aureus Pro Cockpit',
       '/skills': 'Strategy Skills · Aureus Pro',
       '/council': 'AI Senate Council · Aureus Pro',
@@ -166,7 +166,7 @@ function AppShellInner() {
       '/trust': 'Trust Wallet Gate · Aureus Pro',
       '/cmc': 'CoinMarketCap Hub · Aureus Pro',
       '/bnb': 'BNB Smart Chain · Aureus Pro',
-      '/login': 'Connect Web3 Wallet · Aureus Protocol',
+      '/login': 'Connect Web3 Wallet · Aureus Agent',
     }
     document.title = titles[path] || 'Aureus Agent · Verifiable Autonomous Protocol'
   }, [path])
