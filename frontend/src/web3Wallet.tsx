@@ -6,9 +6,8 @@ import { ConnectKitProvider, ConnectKitButton, getDefaultConfig, useModal } from
 
 const queryClient = new QueryClient()
 
-const DEFAULT_WC_PROJECT_ID = 'c0891d12d1bca7289e089af886e1945b'
-const wcProjectId =
-  (import.meta.env.VITE_WALLETCONNECT_PROJECT_ID as string | undefined) || DEFAULT_WC_PROJECT_ID
+const rawEnvId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID as string | undefined
+const wcProjectId = (rawEnvId && !rawEnvId.startsWith('3f8a')) ? rawEnvId : 'c0891d12d1bca7289e089af886e1945b'
 
 export const wagmiConfig = createConfig(
   getDefaultConfig({
