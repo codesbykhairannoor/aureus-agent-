@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Aureus Agent — Technical Whitepaper & Architectural Specification</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 14mm 14mm 14mm 14mm;
+      @bottom-right {
+        content: "Page " counter(page) " of " counter(pages);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        font-size: 7.5pt;
+        color: #64748b;
+      }
+      @bottom-left {
+        content: "Aureus Agent · Protocol Specification · BNB Smart Chain (Chain ID: 56)";
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        font-size: 7.5pt;
+        color: #64748b;
+      }
+    }
+
+    *, *:before, *:after {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-size: 8.5pt;
+      line-height: 1.56;
+      color: #1e293b;
+      background: #ffffff;
+      margin: 0;
+      padding: 0;
+    }
+
+    .cover-container {
+      padding-bottom: 10px;
+      border-bottom: 2px solid #e2e8f0;
+      margin-bottom: 12px;
+    }
+
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .network-badge {
+      display: inline-block;
+      background: #fef08a;
+      color: #854d0e;
+      font-family: "SFMono-Regular", Consolas, Menlo, monospace;
+      font-size: 7pt;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 4px;
+      border: 1px solid #fde047;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .doc-version {
+      font-family: "SFMono-Regular", Consolas, Menlo, monospace;
+      font-size: 7.5pt;
+      color: #64748b;
+      font-weight: 600;
+    }
+
+    h1.doc-title {
+      font-size: 18pt;
+      font-weight: 800;
+      line-height: 1.2;
+      color: #0f172a;
+      margin: 0 0 4px 0;
+      letter-spacing: -0.4px;
+    }
+
+    .doc-subtitle {
+      font-size: 10pt;
+      color: #475569;
+      font-weight: 500;
+      line-height: 1.35;
+      margin-bottom: 10px;
+    }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px 14px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 5px;
+      padding: 8px 12px;
+      font-size: 8pt;
+    }
+
+    .meta-item strong {
+      color: #0f172a;
+      display: inline-block;
+      width: 110px;
+    }
+
+    .meta-item a {
+      color: #0284c7;
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    h2 {
+      font-size: 11pt;
+      font-weight: 750;
+      color: #0f172a;
+      margin-top: 14px;
+      margin-bottom: 6px;
+      padding-bottom: 3px;
+      border-bottom: 1px solid #e2e8f0;
+      letter-spacing: -0.2px;
+      break-after: avoid;
+      page-break-after: avoid;
+    }
+
+    h3 {
+      font-size: 9.5pt;
+      font-weight: 700;
+      color: #1e293b;
+      margin-top: 10px;
+      margin-bottom: 4px;
+      break-after: avoid;
+      page-break-after: avoid;
+    }
+
+    p {
+      margin-top: 0;
+      margin-bottom: 8px;
+      text-align: justify;
+    }
+
+    .callout {
+      background: #f8fafc;
+      border-left: 3px solid #f59e0b;
+      padding: 7px 11px;
+      margin: 9px 0;
+      border-radius: 0 4px 4px 0;
+      font-size: 8.2pt;
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+
+    .callout-title {
+      font-weight: 700;
+      color: #92400e;
+      margin-bottom: 2px;
+      font-size: 8.2pt;
+    }
+
+    .spec-box {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      padding: 8px 11px;
+      margin: 8px 0;
+      font-family: "SFMono-Regular", Consolas, Menlo, monospace;
+      font-size: 7.6pt;
+      line-height: 1.5;
+      color: #0f172a;
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+
+    .math-formula {
+      background: #f1f5f9;
+      border-left: 3px solid #3b82f6;
+      padding: 6px 10px;
+      margin: 7px 0;
+      font-family: "SFMono-Regular", Consolas, Menlo, monospace;
+      font-size: 7.8pt;
+      color: #1e293b;
+      border-radius: 0 4px 4px 0;
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 9px 0;
+      font-size: 7.6pt;
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+
+    table th {
+      background: #f1f5f9;
+      color: #0f172a;
+      text-align: left;
+      font-weight: 700;
+      padding: 5px 7px;
+      border: 1px solid #cbd5e1;
+    }
+
+    table td {
+      padding: 4px 7px;
+      border: 1px solid #e2e8f0;
+      color: #334155;
+      vertical-align: top;
+    }
+
+    table tr:nth-child(even) td {
+      background: #f8fafc;
+    }
+
+    .mono {
+      font-family: "SFMono-Regular", Consolas, Menlo, monospace;
+      font-size: 7.4pt;
+      color: #0f172a;
+      word-break: break-all;
+    }
+
+    .flow-diagram {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #0f172a;
+      color: #f8fafc;
+      padding: 8px 12px;
+      border-radius: 5px;
+      margin: 10px 0;
+      font-family: "SFMono-Regular", Consolas, Menlo, monospace;
+      font-size: 7pt;
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+
+    .flow-node {
+      background: #1e293b;
+      border: 1px solid #334155;
+      padding: 5px 6px;
+      border-radius: 4px;
+      text-align: center;
+      flex: 1;
+      margin: 0 2px;
+    }
+
+    .flow-node.gold {
+      border-color: #f59e0b;
+      color: #fde68a;
+    }
+
+    .flow-arrow {
+      color: #64748b;
+      font-weight: bold;
+      padding: 0 1px;
+    }
+
+    ul, ol {
+      margin-top: 0;
+      margin-bottom: 8px;
+      padding-left: 18px;
+    }
+
+    li {
+      margin-bottom: 3px;
+    }
+
+    .grid-2col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin: 8px 0;
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+
+    .card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      padding: 8px 11px;
+    }
+
+    .card-title {
+      font-weight: 700;
+      font-size: 8.5pt;
+      color: #0f172a;
+      margin-bottom: 3px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <div class="cover-container">
+    <div class="top-bar">
+      <div class="network-badge">BNB SMART CHAIN (BSC MAINNET · CHAIN ID 56)</div>
+      <div class="doc-version">PROTOCOL WHITE PAPER · VERSION 2.1</div>
+    </div>
+    <h1 class="doc-title">Aureus Agent: Verifiable Autonomous Trading Architecture</h1>
+    <div class="doc-subtitle">A Cryptographically Sealed, Contract-Bounded Quantitative Execution Framework on BNB Chain</div>
+
+    <div class="meta-grid">
+      <div class="meta-item"><strong>Lead Architect:</strong> Khairan Noor Fadhlillah</div>
+      <div class="meta-item"><strong>Contact Email:</strong> <a href="mailto:dev@khairan.tech">dev@khairan.tech</a></div>
+      <div class="meta-item"><strong>LinkedIn:</strong> <a href="https://www.linkedin.com/in/khairannoorfadhlillah/">/in/khairannoorfadhlillah</a></div>
+      <div class="meta-item"><strong>GitHub Repository:</strong> <a href="https://github.com/codesbykhairannoor/aureus-agent-">github.com/codesbykhairannoor/aureus-agent-</a></div>
+      <div class="meta-item"><strong>Live Web App:</strong> <a href="https://aureus-agent.vercel.app">aureus-agent.vercel.app</a></div>
+      <div class="meta-item"><strong>License:</strong> MIT Open Source</div>
+    </div>
+  </div>
+
+  <h2>1. Executive Summary & Problem Formulation</h2>
+  <p>
+    The proliferation of autonomous AI trading agents in Web3 has exacerbated a fundamental trust deficit. Traditional algorithmic bots operate as closed black boxes: track records are selectively published via screenshots or private messaging channels, winning calls are retroactively celebrated, and losing positions are deleted or obscured. Furthermore, algorithmic bots execute without programmatic safety ceilings—an unexpected API crash, oracle manipulation, or execution loop hallucination frequently leads to total capital depletion.
+  </p>
+  <p>
+    <strong>Aureus Agent</strong> replaces subjective trust with immutable on-chain mathematics natively on <strong>BNB Smart Chain (BSC Mainnet)</strong>. Capital execution is strictly subordinated to smart contracts: predictive calls are cryptographically sealed prior to market moves, portfolio equity is anchored to a non-negotiable circuit breaker contract, and every transaction is audited by a fail-closed pre-flight security solver.
+  </p>
+
+  <div class="flow-diagram">
+    <div class="flow-node">Multi-Signal Fusion<br><span style="color:#94a3b8; font-size:6.5pt;">10 Quantitative Feeds</span></div>
+    <div class="flow-arrow">➔</div>
+    <div class="flow-node">Net-of-Cost Gate<br><span style="color:#94a3b8; font-size:6.5pt;">Fee & Spread Hurdle</span></div>
+    <div class="flow-arrow">➔</div>
+    <div class="flow-node gold">RiskGovernor Budget<br><span style="color:#fde68a; font-size:6.5pt;">Fractional Kelly Sizing</span></div>
+    <div class="flow-arrow">➔</div>
+    <div class="flow-node">Security Solver<br><span style="color:#94a3b8; font-size:6.5pt;">6 Fail-Closed Checks</span></div>
+    <div class="flow-arrow">➔</div>
+    <div class="flow-node gold">Commit-Reveal<br><span style="color:#fde68a; font-size:6.5pt;">BSC Mainnet Registry</span></div>
+    <div class="flow-arrow">➔</div>
+    <div class="flow-node">DEX Routing<br><span style="color:#94a3b8; font-size:6.5pt;">PancakeSwap v2/v3</span></div>
+  </div>
+
+  <h2>2. The Three Architectural Pillars</h2>
+  <p>
+    Aureus Agent decouples computational market intelligence from financial signing authority. Even if the off-chain neural model produces a flawed signal, the on-chain smart contracts prevent catastrophic execution.
+  </p>
+
+  <h3>Pillar I: Cryptographic Commit-Reveal Prediction Registry</h3>
+  <p>
+    Deployed at <span class="mono">0xcA9499a2d20cFAa98f9Bc3b2F1386A70f51c2FEB</span> on BSC Mainnet, the <code>CommitRevealPredictionRegistry</code> establishes an audit trail that cannot be backfilled:
+  </p>
+  <ul>
+    <li><strong>Commitment Phase (T<sub>0</sub>):</strong> Before submitting an order, the agent generates a cryptographic commitment hash:
+      <div class="math-formula">C = keccak256(abi.encodePacked(agentId, symbol, direction, targetPrice, expiryBlock, salt))</div>
+      The hash is submitted to BSC Mainnet via <code>commitPrediction(C)</code> and mined into a block, creating an immutable timestamp prior to market resolution.
+    </li>
+    <li><strong>Execution & Lock Phase (T<sub>1</sub>):</strong> The position is opened or simulated. The plaintext prediction remains hidden on-chain to eliminate frontrunning and copy-trading vulnerabilities.</li>
+    <li><strong>Reveal Phase (T<sub>2</sub>):</strong> Once the interval closes, the agent reveals parameters and the secret salt. The contract verifies <code>keccak256(...) == C</code>. Upon match, the outcome is scored against decentralized oracle feeds and recorded on the public BSC result ledger (<span class="mono">0x77511fEFF4c0CA8bD5aeA8d64dC6a8dAe88C0744</span>).</li>
+  </ul>
+
+  <div class="callout">
+    <div class="callout-title">Cryptographic Guarantee</div>
+    Because <em>C</em> is committed to BSC Mainnet prior to price outcome, the agent cannot retroactively alter its trade prediction or claim calls it did not commit. A stranger can audit the entire track record on BscScan with zero trust assumptions.
+  </div>
+
+  <h3>Pillar II: Chain-Anchored Risk Governance (`RiskGovernor.sol`)</h3>
+  <p>
+    Automated trading agents frequently fail due to uncontrolled drawdown during market regime shifts. Aureus Agent enforces programmatic capital preservation via <code>RiskGovernor.sol</code> (deployed on BSC Mainnet at <span class="mono">0xFACBc0a9b5a7dd34BfD0B91e1102dF4E72b9e43f</span>).
+  </p>
+  <p>
+    The contract maintains an immutable risk ceiling where <code>maxDrawdownBps = 1400</code> (14.0%). Account high-water mark equity is continuously recorded by an automated keeper (<span class="mono">0x064Af3880d562720963bba400B51F95d45AF91d3</span>). If drawdown exceeds 14%, the contract automatically transitions to the <code>HALTED</code> state, revoking token approvals on-chain.
+  </p>
+
+  <div class="math-formula">
+    Fractional Kelly Allocation Formula: f* = min( κ · [ (p · b - q) / b ],  f_drawdown_ceiling )<br>
+    where: p = 0.4992 (empirical win rate), q = 0.5008, b = 1.82 (payoff ratio), κ = 0.25 (quarter-Kelly safety factor)
+  </div>
+
+  <p>
+    The internal sizing engine sizes each leg so that a sequence of adverse outcomes stops trading before the 14% on-chain threshold is reached, providing a double-layered defense mechanism.
+  </p>
+
+  <h3>Pillar III: Fail-Closed Pre-Flight Security Solver</h3>
+  <p>
+    Prior to broadcasting any DEX transaction or granting approvals, the autonomous execution loop passes the order payload through <code>tx_security_solver.py</code>. Execution aborts immediately if any check fails:
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 25%;">Security Gate</th>
+        <th style="width: 35%;">Evaluation Methodology</th>
+        <th style="width: 40%;">Pass Criteria & Enforcement</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>1. Honeypot & Tax Guard</strong></td>
+        <td>Local EVM fork simulation of buy/sell transfers</td>
+        <td>Combined buy/sell tax &le; 2.0%; transfer function must not revert.</td>
+      </tr>
+      <tr>
+        <td><strong>2. Allowance Containment</strong></td>
+        <td>On-chain query of ERC-20 allowances on BSC</td>
+        <td>Strictly zero unlimited approvals (<code>2^256-1</code>); exact trade amount only.</td>
+      </tr>
+      <tr>
+        <td><strong>3. Dynamic Slippage Cap</strong></td>
+        <td>PancakeSwap pool depth & price impact calculation</td>
+        <td>Max price slippage &le; 0.50% based on simulated swap output.</td>
+      </tr>
+      <tr>
+        <td><strong>4. Pre-Flight Call Trace</strong></td>
+        <td><code>eth_call</code> gas consumption & balance delta verification</td>
+        <td>Execution gas &le; 350,000 wei; expected asset balance must increase.</td>
+      </tr>
+      <tr>
+        <td><strong>5. MEV & Frontrunning Guard</strong></td>
+        <td>Private validator RPC submission</td>
+        <td>Bypasses public mempool; rejects transactions when spread &gt; 0.2%.</td>
+      </tr>
+      <tr>
+        <td><strong>6. Oracle Deviation Gate</strong></td>
+        <td>PancakeSwap spot price vs. Chainlink/Pyth price feed</td>
+        <td>DEX spread |P<sub>spot</sub> - P<sub>oracle</sub>| must not exceed 0.80%.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>3. Interoperability, Identity & Ecosystem Standards</h2>
+  <div class="grid-2col">
+    <div class="card">
+      <div class="card-title">ERC-8004 On-Chain Agent Identity</div>
+      <p style="font-size: 7.8pt; margin: 0;">
+        Aureus Agent holds minted Token ID <strong>#131181</strong> in the official ERC-8004 Registry on BSC (<span class="mono">0x8004A169FB4a3325136EB29fA0ceB6D2e539a432</span>). This on-chain passport binds the agent wallet to its verifiable audit record and public metadata URI.
+      </p>
+    </div>
+    <div class="card">
+      <div class="card-title">HTTP 402 Machine-Payable Feeds</div>
+      <p style="font-size: 7.8pt; margin: 0;">
+        Third-party agents can query Aureus Agent's verified conviction signals over HTTP 402 using EIP-3009 signed authorizations. Micro-fees are settled autonomously in BNB or USDT without human intermediary intervention.
+      </p>
+    </div>
+  </div>
+
+  <h2>4. Verifiable Dataset Commitment & Empirical Honesty</h2>
+  <p>
+    Unlike conventional trading models that claim unverified 80%+ win rates, Aureus Agent's edge is fitted against a historical base of <strong>198,248 resolved outcomes across 42 symbols</strong> on BSC. The Merkle root of this production dataset was sealed on BSC Mainnet to prevent data tampering:
+  </p>
+
+  <div class="spec-box">
+    <strong>BSC Mainnet Dataset Seal Transaction:</strong><br>
+    <a href="https://bscscan.com/tx/0xc3501e1e40954a8b4ca8da36a1018c7d32016e5aa823e63cdc02a5794a9917bc" style="color:#0284c7; text-decoration:none;">0xc3501e1e40954a8b4ca8da36a1018c7d32016e5aa823e63cdc02a5794a9917bc</a><br>
+    <strong>Sealed Merkle Root:</strong> 0x42ce0ec21ca92a98f5b3a696a417255ee1adb739f240b3649abb6b736de183d5<br>
+    <strong>Realized Win Rate:</strong> ~49.92% | <strong>Realized Payoff Ratio:</strong> 1.82:1 | <strong>Expected Value:</strong> Net positive after all swap fees & slippage
+  </div>
+
+  <h2>5. Verified BSC Mainnet Deployments</h2>
+  <p>
+    Every contract listed below is deployed on <strong>BNB Smart Chain (Mainnet · Chain ID 56)</strong> with public, verified source code accessible on BscScan:
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 28%;">Contract Component</th>
+        <th style="width: 42%;">Mainnet Address (BSC Chain 56)</th>
+        <th style="width: 30%;">Explorer Verification</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>CommitRevealPredictionRegistry</strong></td>
+        <td><span class="mono">0xcA9499a2d20cFAa98f9Bc3b2F1386A70f51c2FEB</span></td>
+        <td><a href="https://bscscan.com/address/0xcA9499a2d20cFAa98f9Bc3b2F1386A70f51c2FEB#code" style="color:#0284c7;">View Verified Code on BscScan ↗</a></td>
+      </tr>
+      <tr>
+        <td><strong>RiskGovernor (Drawdown Breaker)</strong></td>
+        <td><span class="mono">0xFACBc0a9b5a7dd34BfD0B91e1102dF4E72b9e43f</span></td>
+        <td><a href="https://bscscan.com/address/0xFACBc0a9b5a7dd34BfD0B91e1102dF4E72b9e43f#code" style="color:#0284c7;">View Verified Code on BscScan ↗</a></td>
+      </tr>
+      <tr>
+        <td><strong>ERC-8004 Identity Registry</strong></td>
+        <td><span class="mono">0x8004A169FB4a3325136EB29fA0ceB6D2e539a432</span></td>
+        <td><a href="https://bscscan.com/address/0x8004A169FB4a3325136EB29fA0ceB6D2e539a432" style="color:#0284c7;">View Token #131181 on BscScan ↗</a></td>
+      </tr>
+      <tr>
+        <td><strong>Result Settlement Ledger</strong></td>
+        <td><span class="mono">0x77511fEFF4c0CA8bD5aeA8d64dC6a8dAe88C0744</span></td>
+        <td><a href="https://bscscan.com/address/0x77511fEFF4c0CA8bD5aeA8d64dC6a8dAe88C0744" style="color:#0284c7;">View Ledger on BscScan ↗</a></td>
+      </tr>
+      <tr>
+        <td><strong>Agent Execution Wallet</strong></td>
+        <td><span class="mono">0xD5df700Ed5355f0c778159592a072B8773faE1CC</span></td>
+        <td><a href="https://bscscan.com/address/0xD5df700Ed5355f0c778159592a072B8773faE1CC" style="color:#0284c7;">View Wallet on BscScan ↗</a></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>6. BNB Chain Builder Grant Roadmap ($15,000 Allocation)</h2>
+  <p>
+    The $15,000 Builder Grant funds the stabilization and developer distribution of our working BSC architecture across three phased milestones:
+  </p>
+
+  <div class="grid-2col">
+    <div class="card">
+      <div class="card-title">Milestone 1 — Telemetry & UI Hardening ($5,000 | Month 1)</div>
+      <p style="font-size: 7.8pt; margin: 0;">
+        Optimizing RPC query caching for BSC Mainnet, hardening the live web cockpit (<a href="https://aureus-agent.vercel.app" style="color:#0284c7;">aureus-agent.vercel.app</a>), and embedding direct 1-click BscScan links for all historical commit-reveal verification transactions.
+      </p>
+    </div>
+    <div class="card">
+      <div class="card-title">Milestone 2 — Multi-Asset Strategy Modules ($5,000 | Month 2)</div>
+      <p style="font-size: 7.8pt; margin: 0;">
+        Configuring tested parameter presets for top liquid BSC pairs (BNB/USDT, BTCB/USDT, ETH/USDT) under verified RiskGovernor protection, publishing automated paper-trading logs and unit test suites on GitHub.
+      </p>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top: 6px;">
+    <div class="card-title">Milestone 3 — Open Developer Quickstart, Docker Distribution & Video Showcase ($5,000 | Month 3)</div>
+    <p style="font-size: 7.8pt; margin: 0;">
+      Publishing complete developer documentation, a 1-command Docker container, and a 5-minute video walkthrough demonstrating how any Web3 builder can deploy their own verifiable agent on BSC in under 15 minutes.
+    </p>
+  </div>
+
+  <h2>7. Lead Architect Profile & Official Project References</h2>
+  <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 5px; padding: 10px; margin-top: 6px; break-inside: avoid; page-break-inside: avoid;">
+    <p style="margin: 0 0 5px 0; font-size: 8.2pt;">
+      <strong>Khairan Noor Fadhlillah</strong> — Lead Web3 Systems Architect & Quantitative Engineer.<br>
+      Specializing in EVM smart contract architecture, high-frequency decentralized exchange routing, and automated risk systems.
+    </p>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px; font-size: 7.8pt;">
+      <div><strong>Official Email:</strong> <a href="mailto:dev@khairan.tech" style="color:#0284c7;">dev@khairan.tech</a></div>
+      <div><strong>LinkedIn Profile:</strong> <a href="https://www.linkedin.com/in/khairannoorfadhlillah/" style="color:#0284c7;">/in/khairannoorfadhlillah</a></div>
+      <div><strong>GitHub Organization:</strong> <a href="https://github.com/codesbykhairannoor/aureus-agent-" style="color:#0284c7;">github.com/codesbykhairannoor/aureus-agent-</a></div>
+      <div><strong>Live Production DApp:</strong> <a href="https://aureus-agent.vercel.app" style="color:#0284c7;">aureus-agent.vercel.app</a></div>
+    </div>
+  </div>
+
+</body>
+</html>
