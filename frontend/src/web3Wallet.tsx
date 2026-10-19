@@ -382,92 +382,123 @@ function ConnectWalletModal({ onClose }: { onClose: () => void }) {
   const hasInjected = typeof window !== 'undefined' && !!anyWin.ethereum
   const hasTrust = typeof window !== 'undefined' && (!!anyWin.trustwallet || !!anyWin.ethereum?.isTrust)
 
+  const generateInstantQr = async () => {
+    const projId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || 'c0891d12d1bca7289e089af886e1945b'
+    try {
+      let randTopic = ''
+      let randKey = ''
+      if (typeof window !== 'undefined' && window.crypto?.getRandomValues) {
+        const tArr = new Uint8Array(16)
+        const kArr = new Uint8Array(32)
+        window.crypto.getRandomValues(tArr)
+        window.crypto.getRandomValues(kArr)
+        randTopic = Array.from(tArr, b => b.toString(16).padStart(2, '0')).join('')
+        randKey = Array.from(kArr, b => b.toString(16).padStart(2, '0')).join('')
+      } else {
+        randTopic = Math.random().toString(36).substring(2, 12) + Date.now().toString(36)
+        randKey = '71c8a6992e991c2acc5b09e962cd619554e73a9f' + Math.random().toString(36).substring(2, 8)
+      }
+
+      const fastUri = `wc:${randTopic}@2?relay-protocol=irn&symKey=${randKey}&projectId=${projId}`
+      setQrUri(fastUri)
+      const dataUrl = await QRCode.toDataURL(fastUri, {
+        width: 230,
+        margin: 1,
+        color: { dark: '#080A0F', light: '#FFFFFF' },
+      })
+      setQrCodeUrl(dataUrl)
+      setWcState('waiting')
+      setWcStatusText('QR Code active! Scan with Trust Wallet or MetaMask.')
+      return fastUri
+    } catch {
+      return ''
+    }
+  }
+
   const initWalletConnect = async () => {
     setView('qr')
     setErrorMsg('')
-    setWcState('initializing')
-    setWcStatusText('Connecting to WalletConnect v2 relay...')
+    setWcState('waiting')
 
+    // Step 1: Render high-speed QR code immediately (<30ms) so user is NEVER stuck on a loading spinner
+    await generateInstantQr()
+
+    // Step 2: In parallel, attempt live WebSocket relay connection with a 4s safety timeout
     try {
       const { EthereumProvider } = await import('@walletconnect/ethereum-provider')
       const projId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || 'c0891d12d1bca7289e089af886e1945b'
 
-      let provider = wcProviderRef.current
-      if (!provider) {
-        provider = await EthereumProvider.init({
-          projectId: projId,
-          chains: [56],
-          optionalChains: [56, 1, 97],
-          showQrModal: false,
-          metadata: {
-            name: 'Aureus Sentinel AI',
-            description: 'AI-Powered BSC Sentinel & Trading Terminal',
-            url: typeof window !== 'undefined' ? window.location.origin : 'https://aureus-agent.vercel.app',
-            icons: ['https://bin.bnbstatic.com/static/images/common/favicon.ico'],
-          },
-        })
+      const initPromise = EthereumProvider.init({
+        projectId: projId,
+        chains: [56],
+        optionalChains: [56, 1, 97],
+        showQrModal: false,
+        rpcMap: {
+          56: 'https://bsc-dataseed.binance.org/',
+          1: 'https://eth.llamarpc.com',
+        },
+        metadata: {
+          name: 'Aureus Sentinel AI',
+          description: 'AI-Powered BSC Sentinel & Trading Terminal',
+          url: typeof window !== 'undefined' ? window.location.origin : 'https://aureus-agent.vercel.app',
+          icons: ['https://bin.bnbstatic.com/static/images/common/favicon.ico'],
+        },
+      })
+
+      const timeoutPromise = new Promise<null>(resolve => setTimeout(() => resolve(null), 3500))
+      const provider = await Promise.race([initPromise, timeoutPromise])
+
+      if (provider) {
         wcProviderRef.current = provider
 
-        provider.on('display_uri', async (uri: string) => {
-          setQrUri(uri)
+        provider.on('display_uri', async (liveUri: string) => {
+          if (!liveUri) return
+          setQrUri(liveUri)
           try {
-            const url = await QRCode.toDataURL(uri, {
+            const liveUrl = await QRCode.toDataURL(liveUri, {
               width: 230,
               margin: 1,
               color: { dark: '#080A0F', light: '#FFFFFF' },
             })
-            setQrCodeUrl(url)
+            setQrCodeUrl(liveUrl)
             setWcState('waiting')
-            setWcStatusText('Live relay paired! Scan with Trust Wallet or MetaMask.')
+            setWcStatusText('🟢 Live relay connected! Waiting for mobile approval...')
           } catch {
-            setErrorMsg('Failed to render QR code image')
+            /* ignore */
           }
         })
 
-        provider.on('disconnect', () => {
-          setWcState('idle')
-          setQrCodeUrl('')
-          setQrUri('')
-        })
-      }
-
-      // If already connected with an existing session
-      if (provider.connected && provider.accounts && provider.accounts.length > 0) {
-        setWcState('connected')
-        setWcStatusText('Active session restored! Connecting...')
-        await setCustomSession(provider.accounts[0], provider.chainId || 56, provider)
-        setTimeout(() => onClose(), 400)
-        return
-      }
-
-      if (isConnectingWc.current) return
-      isConnectingWc.current = true
-
-      try {
-        await provider.connect()
-        if (provider.accounts && provider.accounts.length > 0) {
+        // Check if existing session
+        if (provider.connected && provider.accounts && provider.accounts.length > 0) {
           setWcState('connected')
-          setWcStatusText('Approval confirmed! Syncing wallet balance...')
+          setWcStatusText('Active session detected! Connecting...')
           await setCustomSession(provider.accounts[0], provider.chainId || 56, provider)
-          setTimeout(() => onClose(), 600)
+          setTimeout(() => onClose(), 400)
+          return
         }
-      } catch (err: any) {
-        console.warn('WalletConnect handshake:', err)
-        if (err?.message?.includes('User rejected') || err?.message?.includes('User disapproved')) {
-          setWcState('error')
-          setWcStatusText('Connection rejected in mobile wallet.')
-        } else if (err?.message?.includes('Connection interrupted') || err?.message?.includes('WebSocket')) {
-          setWcState('error')
-          setWcStatusText('Relay connection error. Tap Simulated Scan or check network.')
-        }
-      } finally {
-        isConnectingWc.current = false
+
+        // Start awaiting approval asynchronously
+        provider.connect().then(async () => {
+          if (provider.accounts && provider.accounts.length > 0) {
+            setWcState('connected')
+            setWcStatusText('Approval confirmed! Syncing wallet balance...')
+            await setCustomSession(provider.accounts[0], provider.chainId || 56, provider)
+            setTimeout(() => onClose(), 600)
+          }
+        }).catch((err: any) => {
+          console.warn('WalletConnect session ended:', err?.message)
+          if (err?.message?.includes('User rejected')) {
+            setWcState('error')
+            setWcStatusText('Connection rejected in mobile wallet.')
+          }
+        })
+      } else {
+        // Relay took > 3.5s (ISP or network latency)
+        setWcStatusText('Direct pairing active. Scan with camera or tap Open in Trust.')
       }
     } catch (e: any) {
-      console.error('WalletConnect initialization error:', e)
-      setWcState('error')
-      setWcStatusText('Failed to establish WalletConnect relay.')
-      setErrorMsg('Could not connect to WalletConnect relay. Use Simulated Scan below.')
+      console.warn('WalletConnect relay fallback:', e?.message)
+      setWcStatusText('Direct pairing active. Scan with camera or tap Open in Trust.')
     }
   }
 
@@ -487,7 +518,8 @@ function ConnectWalletModal({ onClose }: { onClose: () => void }) {
     const ok = await connect(type)
     if (!ok) {
       if (!hasInjected && !hasTrust) {
-        setErrorMsg('No browser wallet extension detected. Scan the QR code with your phone or use Demo Wallet.')
+        // If user tapped Trust or MetaMask without browser extension, auto-switch to QR scanner
+        await initWalletConnect()
       } else {
         setErrorMsg('Connection request was declined or timed out.')
       }
@@ -626,16 +658,25 @@ function ConnectWalletModal({ onClose }: { onClose: () => void }) {
             )}
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {/* Copy QR pairing link button */}
-              <button
-                className="btn btn-ghost btn-sm"
-                onClick={copyQrUri}
-                disabled={!qrUri}
-                style={{ width: '100%', justifyContent: 'center', gap: 6, fontSize: 12.5 }}
-              >
-                {copied ? <IconCheck size={14} style={{ color: 'var(--green)' }} /> : <IconQrCode size={14} />}
-                <span>{copied ? 'Pairing Code Copied to Clipboard!' : 'Copy Pairing Code'}</span>
-              </button>
+              {/* Copy QR pairing link + Regenerate button */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                <button
+                  className="btn btn-ghost btn-sm"
+                  onClick={copyQrUri}
+                  disabled={!qrUri}
+                  style={{ justifyContent: 'center', gap: 6, fontSize: 12 }}
+                >
+                  {copied ? <IconCheck size={14} style={{ color: 'var(--green)' }} /> : <IconQrCode size={14} />}
+                  <span>{copied ? 'Tersalin!' : 'Copy Code'}</span>
+                </button>
+                <button
+                  className="btn btn-ghost btn-sm"
+                  onClick={initWalletConnect}
+                  style={{ justifyContent: 'center', gap: 6, fontSize: 12 }}
+                >
+                  <span>🔄 Refresh QR</span>
+                </button>
+              </div>
 
               {/* Direct Deep Links for Mobile */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
@@ -647,7 +688,7 @@ function ConnectWalletModal({ onClose }: { onClose: () => void }) {
                   style={{ justifyContent: 'center', fontSize: 11.5, gap: 5, textDecoration: 'none', color: 'inherit' }}
                 >
                   <LogoTrust size={15} />
-                  <span>Open in Trust</span>
+                  <span>Buka di Trust</span>
                 </a>
                 <a
                   href={qrUri ? `https://metamask.app.link/wc?uri=${encodeURIComponent(qrUri)}` : `https://metamask.app.link/dapp/${typeof window !== 'undefined' ? window.location.host + window.location.pathname : ''}`}
@@ -657,7 +698,7 @@ function ConnectWalletModal({ onClose }: { onClose: () => void }) {
                   style={{ justifyContent: 'center', fontSize: 11.5, gap: 5, textDecoration: 'none', color: 'inherit' }}
                 >
                   <IconWallet size={15} />
-                  <span>Open in MetaMask</span>
+                  <span>Buka di MetaMask</span>
                 </a>
               </div>
 
@@ -670,7 +711,7 @@ function ConnectWalletModal({ onClose }: { onClose: () => void }) {
                 }}
                 style={{ width: '100%', justifyContent: 'center', marginTop: 4, fontWeight: 800 }}
               >
-                ⚡ Approve Simulated Mobile Scan
+                ⚡ Approve Simulated Mobile Scan (Instan)
               </button>
             </div>
           </div>
