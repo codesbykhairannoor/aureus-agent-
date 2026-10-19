@@ -35,10 +35,6 @@ export default function Landing({ go }: { go: (p: string) => void }) {
         <div className="cp-mesh">
           <div className="cp-wash" />
           <div className="cp-grid-bg" />
-          <div className="cp-orbs">
-            <span className="cp-orb" style={{ width: 420, height: 420, left: '2%', top: '-10%', background: 'var(--c-primary)', opacity: 0.18, animationDelay: '0s' }} />
-            <span className="cp-orb" style={{ width: 340, height: 340, right: '4%', top: '10%', background: 'var(--gold-2)', opacity: 0.14, animationDelay: '4s' }} />
-          </div>
         </div>
 
         <div className="cp-hero-split" style={{ position: 'relative', zIndex: 1 }}>
